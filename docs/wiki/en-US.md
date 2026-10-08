@@ -77,16 +77,19 @@ The input is passed as a separate process argument without embedding it in Pytho
 
 ## Managing scripts and templates
 
-The toolbar has four actions. Hover over an icon to see its label.
+The toolbar has five actions. Hover over an icon to see its label.
 
 | UI label | Action |
 | --- | --- |
 | 新建脚本 — New script | Create a script with a name, description, type, and body |
 | 批量操作 — Batch operations | Import a directory or export the script library |
 | 导入 — Import | Read script JSON from the clipboard |
+| 排序 — Sort | Sort by usage frequency, addition order, or name |
 | 环境路径 — Environment paths | Configure global interpreters and tools |
 
-The table shows name, type, and description. Double-click a script to run it. Its context menu provides **执行脚本 (Run)**, **编辑脚本 (Edit)**, **分享脚本 (Share)**, and **删除脚本 (Delete)**. Use **Shift+F10** or the context-menu key for the selected row. Deletion asks for confirmation. Clicking empty table space does not operate on a script.
+For scripts with parameters, clicking 执行 (Run) keeps the parameter dialog open so you can edit inputs and run again. Click 关闭 (Close) to dismiss it. The dialog allows other IDE operations; reopening the same script in the same project focuses its existing dialog, and an active run still prevents duplicate launches.
+
+The table shows name, type, and description. Double-click a script to run it. Its context menu provides **执行脚本 (Run)**, **编辑脚本 (Edit)**, **分享脚本 (Share)**, and **删除脚本 (Delete)**. Use **Shift+F10** or the context-menu key for the selected row. Press **Delete** on a selected script to request deletion (Backspace also works on macOS). Deletion asks for confirmation. Sorting is persisted across projects: usage frequency is highest first, addition order is oldest first, and names sort ascending ignoring case. Usage counts actual process launches, including reruns; cancellation and launch failures do not count. Ties retain addition order. Clicking empty table space does not operate on a script.
 
 In the editor, **脚本模板与参数语法 (Script templates and parameter syntax)** opens reference examples, syntax help, parameter substitution previews, and code copying. A preview does not execute a command. Paste copied code into the body, choose the appropriate type and configuration, and save. There is no separate template library or “Save as template” action.
 
@@ -138,7 +141,7 @@ Use `${file}`, `${mode}`, and `${output}` elsewhere in the body or configuration
 
 ### Browsing and substitution
 
-File and directory browse buttons start at the **project root in the current IDE window**, and you can navigate outside the project. Without a project root, the IDE's default browsing behavior applies. Use `@file` for files and `@dir` for directories. Entering folders while browsing for a file is normal navigation. Manually entered paths are currently checked for required input only, not for existence or file/directory type.
+File and directory browse buttons prefer an existing input path (relative paths resolve from the current project root). Empty, invalid, or nonexistent input falls back to the **project root in the current IDE window**, and you can navigate outside the project. Without a project root, the IDE's default browsing behavior applies. Use `@file` for files and `@dir` for directories. Entering folders while browsing for a file is normal navigation. Manually entered paths are currently checked for required input only, not for existence or file/directory type.
 
 Substitution is literal: quotes, backslashes, newlines, and shell metacharacters are not escaped automatically. Handle the target language's syntax when embedding input in source. Prefer Arguments JSON for paths or arbitrary text; each array item is a separate argument.
 

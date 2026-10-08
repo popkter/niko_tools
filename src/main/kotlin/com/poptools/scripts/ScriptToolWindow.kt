@@ -82,6 +82,19 @@ class ScriptToolWindow : ToolWindowFactory {
             globalActions.add(action("新建脚本", "新建自定义脚本", AllIcons.Actions.AddFile) { edit(ScriptDefinition(), false) })
             globalActions.add(action("批量操作", "批量导入或导出脚本目录", AllIcons.Actions.SyncPanels, ::directoryTransfer))
             globalActions.add(action("导入", "从剪贴板导入脚本", AllIcons.Actions.Download, ::importClipboard))
+            globalActions.add(DefaultActionGroup("排序", true).apply {
+                templatePresentation.icon = AllIcons.ObjectBrowser.Sorted
+                templatePresentation.description = "设置脚本列表排序方式"
+                ScriptLibrary.SortOrder.values().forEach { order ->
+                    add(object : ToggleAction("按${order.label}") {
+                        override fun isSelected(e: AnActionEvent) = ScriptLibrary.getInstance().sortOrder() == order
+                        override fun setSelected(e: AnActionEvent, state: Boolean) {
+                            if (state) ScriptLibrary.getInstance().setSortOrder(order)
+                        }
+                        override fun getActionUpdateThread() = ActionUpdateThread.EDT
+                    })
+                }
+            })
             globalActions.add(action("环境路径", "配置解释器和工具路径", AllIcons.General.Settings) { ShowSettingsUtil.getInstance().showSettingsDialog(project, EnvironmentSettings::class.java) })
             toolbar = ActionManager.getInstance().createActionToolbar("NikoTools.ScriptToolbar", globalActions, true)
             toolbar.targetComponent = scriptTable
@@ -117,6 +130,14 @@ class ScriptToolWindow : ToolWindowFactory {
                     createScriptMenu(script).component.show(scriptTable, row.x + JBUI.scale(24), row.y + row.height)
                 }
             })
+            scriptTable.inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_DELETE, 0), "nikoTools.delete")
+            // The Mac keyboard's Delete key generates Backspace without Fn.
+            scriptTable.inputMap.put(KeyStroke.getKeyStroke(KeyEvent.VK_BACK_SPACE, 0), "nikoTools.delete")
+            scriptTable.actionMap.put("nikoTools.delete", object : AbstractAction() {
+                override fun actionPerformed(e: ActionEvent) {
+                    if (scriptTable.selectedRowCount == 1) selected()?.let(::deleteScript)
+                }
+            })
         }
         private fun typeLabel(kind: String) = when (kind) {
             "powershell" -> "PowerShell"; "python" -> "Python"; "bash" -> "Bash"; "batch" -> "BAT"; else -> "外部进程"
@@ -133,10 +154,12 @@ class ScriptToolWindow : ToolWindowFactory {
             group.add(action("编辑脚本", "编辑所选脚本", AllIcons.Actions.Edit) { edit(script, false) })
             group.add(action("分享脚本", "复制分享内容到剪贴板", AllIcons.Actions.Share) { shareClipboard(script) })
             group.addSeparator()
-            group.add(action("删除脚本", "删除所选脚本", AllIcons.Actions.GC) {
-                if (Messages.showYesNoDialog(project, "删除“${script.title}”？", "确认删除", Messages.getQuestionIcon()) == Messages.YES) ScriptLibrary.getInstance().delete(script.id, false)
-            })
+            group.add(action("删除脚本", "删除所选脚本", AllIcons.Actions.GC) { deleteScript(script) })
             return ActionManager.getInstance().createActionPopupMenu("NikoTools.ScriptPopup", group).also { it.setTargetComponent(scriptTable) }
+        }
+        private fun deleteScript(script: ScriptDefinition) {
+            if (project.isDisposed) return
+            if (Messages.showYesNoDialog(project, "删除“${script.title}”？", "确认删除", Messages.getQuestionIcon()) == Messages.YES) ScriptLibrary.getInstance().delete(script.id, false)
         }
         private fun action(title: String, description: String, icon: Icon, run: () -> Unit): AnAction = object : DumbAwareAction(title, description, icon) {
             override fun actionPerformed(e: AnActionEvent) = run()
@@ -150,7 +173,7 @@ class ScriptToolWindow : ToolWindowFactory {
         private fun edit(s: ScriptDefinition, template: Boolean) = ScriptEditor(project, s, template).show()
         private fun refresh() {
             val sid = selected()?.id
-            scriptTable.clearSelection(); scripts.clear(); scripts.addAll(ScriptLibrary.getInstance().list(false)); model.fireTableDataChanged()
+            scriptTable.clearSelection(); scripts.clear(); scripts.addAll(ScriptLibrary.getInstance().sortedScripts()); model.fireTableDataChanged()
             scripts.forEachIndexed { i, script -> if (script.id == sid) scriptTable.setRowSelectionInterval(i, i) }
         }
         private fun importClipboard() {

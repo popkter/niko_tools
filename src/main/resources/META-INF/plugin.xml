@@ -12,7 +12,7 @@
     <ul>
       <li>支持 PowerShell、Python、Bash、Windows BAT，以及直接启动可执行程序的 process 类型。</li>
       <li>自动从模板生成参数表单，支持文本、默认值、下拉、文件和目录；高级元数据支持数字、布尔、多行、密码等输入。</li>
-      <li>文件和目录选择器默认从当前 IDE 窗口的项目根目录打开；工作目录默认使用当前项目根目录。</li>
+      <li>文件和目录选择器优先打开输入框中的有效路径，无有效路径时从当前 IDE 窗口的项目根目录打开；工作目录默认使用当前项目根目录。</li>
       <li>支持剪贴板分享与导入、脚本目录批量迁移、终端选区创建脚本（需可选 Terminal 插件）。</li>
       <li>原生 Run 控制台显示输出、错误和退出码，提供再次运行、停止及超时控制。</li>
       <li>自动尝试读取 IDE 所选 Android 设备并提供 ANDROID_SERIAL；普通脚本无需连接 Android 设备。</li>
@@ -38,7 +38,7 @@
     没有可用设备时普通脚本仍可启动。显式 android_device 依赖或必填设备参数才强制要求设备。
     脚本库和工具路径为 IDE 用户级配置，跨项目共享；运行中不支持交互式标准输入。</p>
     <p>完整中英文 Wiki 位于源码仓库的 <code>docs/wiki</code> 目录。
-    右键脚本可编辑、分享或删除；顶部“批量操作”可备份和迁移脚本目录。
+    右键脚本可编辑、分享或删除，选中后按 Delete 可弹出删除确认；列表支持按使用频率、添加顺序或名称排序。顶部“批量操作”可备份和迁移脚本目录。
     分享会移除默认值与解释器路径，但保留脚本中的其他字面内容；目录导出保留默认值。</p>
 
     <h2>NikoTools — Custom Script Tools</h2>
@@ -48,7 +48,7 @@
     <ul>
       <li>Run PowerShell, Python, Bash, Windows batch scripts, or launch an executable directly with process.</li>
       <li>Generate parameter forms from templates: text, defaults, choices, files, and directories. Advanced metadata adds numbers, booleans, multiline and password inputs.</li>
-      <li>File and directory browsing starts at the current IDE window's project root. The default working directory is also the current project root.</li>
+      <li>File and directory browsing prefers an existing input path and falls back to the current IDE window's project root. The default working directory is also the current project root.</li>
       <li>Share and import clipboard JSON, migrate script directories, and create scripts from terminal selections with the optional Terminal plugin.</li>
       <li>View output, errors, and exit codes in Run tabs, with rerun, stop, and timeout controls.</li>
       <li>Automatically read the IDE-selected Android device when available and supply ANDROID_SERIAL. Ordinary scripts do not require an Android device.</li>
@@ -74,7 +74,7 @@
     ordinary scripts still launch without a usable device. Only an explicit android_device requirement or required device parameter enforces device selection.
     Scripts and tool paths are shared across projects within the IDE configuration. Interactive process stdin is unsupported.</p>
     <p>The full Chinese and English Wiki is in the source repository's <code>docs/wiki</code> directory.
-    Right-click scripts to edit, share, or delete. Use 批量操作 (Batch operations) for directory backup and migration.
+    Right-click scripts to edit, share, or delete; press Delete on a selected script for deletion confirmation. Sort the list by usage frequency, addition order, or name. Use 批量操作 (Batch operations) for directory backup and migration.
     Sharing removes defaults and interpreter overrides but preserves other literal content; directory exports preserve defaults.
     The current UI labels are Chinese; the English Wiki includes translations.</p>
     <p>MIT License. Copyright (c) 2026 popkter.

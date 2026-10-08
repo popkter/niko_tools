@@ -10,12 +10,13 @@ import com.intellij.openapi.vfs.LocalFileSystem
 import com.intellij.openapi.vfs.VirtualFile
 import com.intellij.ui.dsl.builder.Cell
 import com.intellij.ui.dsl.builder.Row
+import java.nio.file.Path
 
 internal fun projectRoot(project: Project?): VirtualFile? = project?.basePath?.let {
     LocalFileSystem.getInstance().findFileByPath(it)?.takeIf { file -> file.isDirectory }
 }
 
-/** Start in the owning window's project, without restricting browsing outside that project. */
+/** Prefer an existing input path, falling back to the owning window's project root. */
 internal class ProjectRootBrowseListener(
     descriptor: FileChooserDescriptor,
     private val owningProject: Project?,
@@ -26,7 +27,20 @@ internal class ProjectRootBrowseListener(
     private fun resolveOwningProject(): Project? = owningProject
         ?: CommonDataKeys.PROJECT.getData(DataManager.getInstance().getDataContext(owner))
 
-    public override fun getInitialFile(): VirtualFile? = projectRoot(resolveOwningProject()) ?: super.getInitialFile()
+    public override fun getInitialFile(): VirtualFile? {
+        val project = resolveOwningProject()
+        val current = owner.text.trim().takeIf { it.isNotEmpty() }?.let { text ->
+            try {
+                var path = Path.of(text)
+                if (!path.isAbsolute) {
+                    val base = project?.basePath ?: return@let null
+                    path = Path.of(base).resolve(path)
+                }
+                LocalFileSystem.getInstance().refreshAndFindFileByNioFile(path.normalize())?.takeIf { it.isValid }
+            } catch (_: java.nio.file.InvalidPathException) { null }
+        }
+        return current ?: projectRoot(project)
+    }
 }
 
 internal fun Row.projectPathField(

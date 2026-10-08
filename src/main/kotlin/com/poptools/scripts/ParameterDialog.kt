@@ -17,7 +17,8 @@ class ParameterDialog @JvmOverloads constructor(
     private val project: Project,
     script: ScriptDefinition,
     private val previous: Map<String, String>,
-    buttonText: String = "执行"
+    buttonText: String = "执行",
+    private val onExecute: ((Map<String, String>) -> Unit)? = null
 ) : DialogWrapper(project) {
     private val parameters = script.parameters
     private val scriptId = script.id
@@ -25,7 +26,13 @@ class ParameterDialog @JvmOverloads constructor(
     private val values = linkedMapOf<String, String>()
     private val readers = linkedMapOf<String, () -> String>()
     private lateinit var form: DialogPanel
-    init { title = "运行参数 — ${script.title}"; setOKButtonText(buttonText); init(); form.registerValidators(disposable) }
+    init {
+        title = "运行参数 — ${script.title}"
+        setOKButtonText(buttonText)
+        if (onExecute != null) { isModal = false; setCancelButtonText("关闭") }
+        init()
+        form.registerValidators(disposable)
+    }
 
     override fun createCenterPanel(): JComponent {
         form = panel {
@@ -89,7 +96,7 @@ class ParameterDialog @JvmOverloads constructor(
                 val value = readers.getValue(p.id)()
                 validateValue(p, value); values[p.id] = value
             }
-            super.doOKAction()
+            if (onExecute != null) onExecute.invoke(values()) else super.doOKAction()
         } catch (e: Exception) { setErrorText(e.message ?: "参数无效") }
     }
     fun values(): Map<String, String> = LinkedHashMap(values)

@@ -79,6 +79,36 @@ class KotlinMigrationTest {
         assertEquals(state.paths, restored.paths)
     }
 
+    @Test fun sortingAndUsagePersistWithoutChangingAdditionOrder() {
+        val library = ScriptLibrary()
+        val scripts = listOf("Zulu", "alpha", "Alpha").map { title ->
+            ScriptDefinition().also { it.title = title; it.executor.command = "echo hello" }
+        }
+        scripts.forEach { library.save(it, false) }
+        library.save(scripts[0].also { it.description = "edited" }, false)
+        assertEquals(scripts.map { it.id }, library.sortedScripts().map { it.id })
+        library.setSortOrder(ScriptLibrary.SortOrder.NAME)
+        assertEquals(listOf("alpha", "Alpha", "Zulu"), library.sortedScripts().map { it.title })
+        library.recordUsage(scripts[2].id)
+        library.recordUsage(scripts[1].id)
+        library.recordUsage(scripts[2].id)
+        library.recordUsage("missing")
+        library.setSortOrder(ScriptLibrary.SortOrder.USAGE)
+        assertEquals(listOf("Alpha", "alpha", "Zulu"), library.sortedScripts().map { it.title })
+        val restored = ScriptLibrary().apply {
+            loadState(XmlSerializer.deserialize(XmlSerializer.serialize(library.state), ScriptLibrary.State::class.java))
+        }
+        assertEquals(ScriptLibrary.SortOrder.USAGE, restored.sortOrder())
+        assertEquals(library.sortedScripts().map { it.id }, restored.sortedScripts().map { it.id })
+        val snapshot = restored.state
+        snapshot.usageCounts.clear()
+        assertEquals(2L, restored.state.usageCounts[scripts[2].id])
+        restored.delete(scripts[2].id, false)
+        assertFalse(restored.state.usageCounts.containsKey(scripts[2].id))
+        restored.setSortOrder(ScriptLibrary.SortOrder.ADDED)
+        assertEquals(scripts.take(2).map { it.id }, restored.sortedScripts().map { it.id })
+    }
+
     @Test fun registeredExtensionClassesHavePublicNoArgConstructors() {
         val classes = listOf(ScriptLibrary::class.java, EnvironmentSettings::class.java, ScriptToolWindow::class.java,
             ManageScriptsAction::class.java, NewFromTerminalAction::class.java, TerminalIntegration::class.java, AndroidPluginDeviceProvider::class.java)

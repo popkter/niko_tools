@@ -3,6 +3,10 @@
 ## [Unreleased]
 
 ### Changed
+- Keep execution parameter dialogs open for repeated runs without blocking IDE operations; retain accept-and-close behavior for template previews.
+- Prefer valid input paths in file/directory choosers, falling back to the current project root.
+- Confirm deletion of the selected script with Delete (or Backspace on macOS).
+- Persist script sorting by launch frequency, addition order, or name; preserve addition order when editing.
 - Fix file chooser listener loading on Android Studio 253 by avoiding an override of the now-final getProject method.
 - Use the standard Gradle build/assemble lifecycle to package the plugin, add a shared Build Plugin run configuration, and remove platform-specific build wrappers.
 - Remove the device-mode selector; automatically pass available IDE device selection to scripts without requiring Android or adb for ordinary scripts. Retain legacy JSON fields and explicit device prerequisites.

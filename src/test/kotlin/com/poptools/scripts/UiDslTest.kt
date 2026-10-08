@@ -9,6 +9,41 @@ import java.nio.file.Files
 
 /** Exercise native DSL bindings and dialog construction in a real test application. */
 class UiDslTest : LightPlatformTestCase() {
+    fun testExecutionDialogKeepsParametersForRepeatedRuns() {
+        val script = ScriptDefinition().also { it.title = "Repeat"; it.executor.command = "echo hello" }
+        script.parameters = ParameterTemplates.synchronize(listOf("${'$'}{name:hello}"), emptyList())
+        val runs = arrayListOf<Map<String, String>>()
+        val dialog = ParameterDialog(project, script, emptyMap(), onExecute = { runs.add(it) })
+        try {
+            val builder = dialog.javaClass.getDeclaredMethod("createCenterPanel").apply { isAccessible = true }
+            val field = descendants(builder.invoke(dialog) as Component).filterIsInstance<javax.swing.JTextField>().single()
+            dialog.performOKAction()
+            assertEquals(listOf(mapOf("name" to "hello")), runs)
+            assertFalse(dialog.isOK)
+            assertFalse(Disposer.isDisposed(dialog.disposable))
+            field.text = "second"
+            dialog.performOKAction()
+            assertEquals(listOf(mapOf("name" to "hello"), mapOf("name" to "second")), runs)
+            assertFalse(Disposer.isDisposed(dialog.disposable))
+            field.text = ""
+            dialog.performOKAction()
+            assertEquals(2, runs.size)
+            assertFalse(Disposer.isDisposed(dialog.disposable))
+        } finally { Disposer.dispose(dialog.disposable) }
+    }
+
+    fun testPreviewDialogStillAcceptsAndCloses() {
+        val script = ScriptDefinition().also { it.executor.command = "echo hello" }
+        script.parameters = ParameterTemplates.synchronize(listOf("${'$'}{name:hello}"), emptyList())
+        val dialog = ParameterDialog(project, script, emptyMap(), "预览")
+        try {
+            // Headless DialogWrapper peers do not report native window modality.
+            dialog.performOKAction()
+            assertTrue(dialog.isOK)
+            assertEquals(mapOf("name" to "hello"), dialog.values())
+        } finally { Disposer.dispose(dialog.disposable) }
+    }
+
     fun testEnvironmentBindingsApplyAndReset() {
         val library = ScriptLibrary.getInstance()
         val oldState = library.state
@@ -87,13 +122,15 @@ class UiDslTest : LightPlatformTestCase() {
         } finally { library.loadState(oldState) }
     }
 
-    fun testFileChoosersStartAtOwningProjectRoot() {
+    fun testFileChoosersPreferExistingInputAndFallBackToOwningProjectRoot() {
         val directory = Files.createTempDirectory("niko-project-chooser")
         val a = Files.createDirectory(directory.resolve("A"))
         val b = Files.createDirectory(directory.resolve("B"))
+        val file = Files.writeString(b.resolve("input.txt"), "input")
         val fs = com.intellij.openapi.vfs.LocalFileSystem.getInstance()
         val rootA = requireNotNull(fs.refreshAndFindFileByNioFile(a))
         val rootB = requireNotNull(fs.refreshAndFindFileByNioFile(b))
+        val input = requireNotNull(fs.refreshAndFindFileByNioFile(file))
         fun projectAt(path: java.nio.file.Path): com.intellij.openapi.project.Project = java.lang.reflect.Proxy.newProxyInstance(
             javaClass.classLoader, arrayOf(com.intellij.openapi.project.Project::class.java)
         ) { _, method, _ ->
@@ -107,16 +144,82 @@ class UiDslTest : LightPlatformTestCase() {
                 com.intellij.openapi.fileChooser.FileChooserDescriptorFactory.createSingleFileDescriptor(),
                 com.intellij.openapi.fileChooser.FileChooserDescriptorFactory.createSingleFolderDescriptor()
             )) {
-                assertEquals(rootA, ProjectRootBrowseListener(descriptor, projectA, field).getInitialFile())
-                assertEquals(rootB, ProjectRootBrowseListener(descriptor, projectB, field).getInitialFile())
+                field.text = b.toString()
+                assertEquals(rootB, ProjectRootBrowseListener(descriptor, projectA, field).getInitialFile())
+                field.text = file.toString()
+                assertEquals(input, ProjectRootBrowseListener(descriptor, projectA, field).getInitialFile())
+                field.text = "input.txt"
+                assertEquals(input, ProjectRootBrowseListener(descriptor, projectB, field).getInitialFile())
+                for (invalid in listOf("", "   ", b.resolve("missing.txt").toString(), "bad\u0000path")) {
+                    field.text = invalid
+                    assertEquals(rootA, ProjectRootBrowseListener(descriptor, projectA, field).getInitialFile())
+                    assertEquals(rootB, ProjectRootBrowseListener(descriptor, projectB, field).getInitialFile())
+                }
             }
             // The platform test fixture supplies the project context for application-level settings.
             val listener = ProjectRootBrowseListener(com.intellij.openapi.fileChooser.FileChooserDescriptorFactory.createSingleFileDescriptor(), null, field)
             assertEquals(projectRoot(project), listener.getInitialFile())
         } finally {
             field.dispose()
-            Files.delete(b); Files.delete(a); Files.delete(directory)
+            Files.delete(file); Files.delete(b); Files.delete(a); Files.delete(directory)
         }
+    }
+
+    fun testDeleteKeyRequiresSelectionAndConfirmation() {
+        val library = ScriptLibrary.getInstance()
+        val oldState = library.state
+        val previousDialog = com.intellij.openapi.ui.TestDialogManager.setTestDialog(com.intellij.openapi.ui.TestDialog.DEFAULT)
+        try {
+            library.loadState(ScriptLibrary.State())
+            val script = ScriptDefinition().also { it.title = "Delete me"; it.executor.command = "echo hello" }
+            library.save(script, false)
+            val table = ScriptToolWindow.ScriptPanel(project).scriptTable
+            val deleteKey = javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_DELETE, 0)
+            val action = table.actionMap.get(table.inputMap.get(deleteKey))
+            assertNotNull(action)
+            assertEquals(table.inputMap.get(deleteKey), table.inputMap.get(javax.swing.KeyStroke.getKeyStroke(java.awt.event.KeyEvent.VK_BACK_SPACE, 0)))
+            var prompts = 0
+            var answer = com.intellij.openapi.ui.Messages.NO
+            com.intellij.openapi.ui.TestDialogManager.setTestDialog { message ->
+                prompts++
+                assertTrue(message.contains(script.title))
+                answer
+            }
+            val event = java.awt.event.ActionEvent(table, 0, "delete")
+            action.actionPerformed(event)
+            assertEquals(0, prompts)
+            table.setRowSelectionInterval(0, 0)
+            action.actionPerformed(event)
+            assertEquals(1, prompts)
+            assertEquals(1, library.list(false).size)
+            answer = com.intellij.openapi.ui.Messages.YES
+            action.actionPerformed(event)
+            assertEquals(2, prompts)
+            assertTrue(library.list(false).isEmpty())
+        } finally {
+            com.intellij.openapi.ui.TestDialogManager.setTestDialog(previousDialog)
+            library.loadState(oldState)
+        }
+    }
+
+    fun testSortingPreservesSelection() {
+        val library = ScriptLibrary.getInstance()
+        val oldState = library.state
+        try {
+            library.loadState(ScriptLibrary.State())
+            val z = ScriptDefinition().also { it.title = "Zulu"; it.executor.command = "echo z" }
+            val a = ScriptDefinition().also { it.title = "Alpha"; it.executor.command = "echo a" }
+            library.save(z, false); library.save(a, false)
+            val table = ScriptToolWindow.ScriptPanel(project).scriptTable
+            table.setRowSelectionInterval(0, 0)
+            library.setSortOrder(ScriptLibrary.SortOrder.NAME)
+            assertEquals("Alpha", table.getValueAt(0, 0).toString())
+            assertEquals(z.id, (table.getValueAt(table.selectedRow, 0) as ScriptDefinition).id)
+            library.setSortOrder(ScriptLibrary.SortOrder.USAGE)
+            library.recordUsage(a.id)
+            assertEquals("Alpha", table.getValueAt(0, 0).toString())
+            assertEquals(z.id, (table.getValueAt(table.selectedRow, 0) as ScriptDefinition).id)
+        } finally { library.loadState(oldState) }
     }
 
     private fun descendants(component: Component): Sequence<Component> = sequence {

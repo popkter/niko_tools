@@ -25,6 +25,9 @@ import com.intellij.ui.dsl.builder.*
 
 object ScriptRunner {
     private val startingKey = Key.create<MutableSet<String>>("poptool.starting.scripts")
+    private val parameterDialogsKey = Key.create<MutableMap<String, ParameterDialog>>("poptool.parameter.dialogs")
+    private fun parameterDialogs(project: Project): MutableMap<String, ParameterDialog> = project.getUserData(parameterDialogsKey)
+        ?: hashMapOf<String, ParameterDialog>().also { project.putUserData(parameterDialogsKey, it) }
     private fun starting(project: Project): MutableSet<String> = project.getUserData(startingKey)
         ?: hashSetOf<String>().also { project.putUserData(startingKey, it) }
     private fun existing(project: Project, id: String): ScriptDescriptor? = RunContentManager.getInstance(project).allDescriptors
@@ -40,17 +43,29 @@ object ScriptRunner {
     }
 
     @JvmStatic fun run(project: Project, source: ScriptDefinition, previous: Map<String, String>) {
-        if (project.isDisposed || alreadyRunning(project, source.id)) return
+        if (project.isDisposed) return
+        parameterDialogs(project)[source.id]?.let { it.toFront(); return }
+        if (alreadyRunning(project, source.id)) return
         val script = ScriptJson.copy(source)
         try {
             ScriptJson.validate(script)
-            val serial = AndroidDevices.serialForScript(project, script)
-            val values = linkedMapOf<String, String>()
             if (script.parameters.isNotEmpty()) {
-                val dialog = ParameterDialog(project, script, previous)
-                if (!dialog.showAndGet()) return
-                values.putAll(dialog.values())
-            }
+                val dialogs = parameterDialogs(project)
+                val dialog = ParameterDialog(project, script, previous, onExecute = { values -> execute(project, script, values) })
+                dialogs[script.id] = dialog
+                Disposer.register(dialog.disposable, Disposable { dialogs.remove(script.id, dialog) })
+                dialog.show()
+            } else execute(project, script, emptyMap())
+        } catch (e: Exception) {
+            Messages.showErrorDialog(project, e.message ?: e.toString(), "脚本无法运行")
+        }
+    }
+
+    private fun execute(project: Project, script: ScriptDefinition, values: Map<String, String>) {
+        if (project.isDisposed || alreadyRunning(project, script.id)) return
+        try {
+            // Re-read device selection and environment for every execution from the retained form.
+            val serial = AndroidDevices.serialForScript(project, script)
             if (script.presentation.confirm_before_run && Messages.showYesNoDialog(project, "执行脚本“${script.title}”？", "确认执行", Messages.getQuestionIcon()) != Messages.YES) return
             val settings = ScriptLibrary.getInstance().paths()
             val base = project.basePath
@@ -158,6 +173,7 @@ object ScriptRunner {
                     finally { previous.reusing = false; descriptor.reusing = false }
                 } else manager.showRunContent(DefaultRunExecutor.getRunExecutorInstance(), descriptor)
                 handler.startNotify()
+                ScriptLibrary.getInstance().recordUsage(script.id)
                 script.executor.timeout_seconds?.let { seconds ->
                     val timeout = AppExecutorUtil.getAppScheduledExecutorService().schedule({
                         if (!handler.isProcessTerminated) {
