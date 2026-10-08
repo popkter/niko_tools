@@ -106,8 +106,8 @@
       },
       {
         "title": "声明一次，多处复用",
-        "code": "Var level = ${日志级别:信息=I|警告=W|错误=E}\nadb logcat \"*:${level}\"",
-        "body": "Var 放在脚本开头，正文通过内部名称引用；声明行会在执行前移除，不是脚本语言本身的语法。"
+        "code": "var level = ${日志级别:信息=I|警告=W|错误=E}\nadb logcat \"*:${level}\"",
+        "body": "var 放在脚本开头，正文通过内部名称引用；声明行会在执行前移除，不是脚本语言本身的语法。"
       },
       {
         "title": "使用提示",
@@ -128,8 +128,8 @@
       },
       {
         "title": "查看日志目录 PowerShell",
-        "body": "生成文件夹选择器；用 Var 让路径在检查和列出文件时复用。无需 Android 设备。",
-        "code": "Var logs = ${日志目录@dir}\n\n$ErrorActionPreference = \"Stop\"\nif (-not (Test-Path -LiteralPath \"${logs}\" -PathType Container)) {\n    Write-Error \"请选择有效的日志目录\"\n    exit 1\n}\nGet-ChildItem -LiteralPath \"${logs}\" -File |\n    Select-Object Name, Length, LastWriteTime"
+        "body": "生成文件夹选择器；用 var 让路径在检查和列出文件时复用。无需 Android 设备。",
+        "code": "var logs = ${日志目录@dir}\n\n$ErrorActionPreference = \"Stop\"\nif (-not (Test-Path -LiteralPath \"${logs}\" -PathType Container)) {\n    Write-Error \"请选择有效的日志目录\"\n    exit 1\n}\nGet-ChildItem -LiteralPath \"${logs}\" -File |\n    Select-Object Name, Length, LastWriteTime"
       },
       {
         "title": "按数量输出序号 Python",

@@ -44,6 +44,83 @@ class UiDslTest : LightPlatformTestCase() {
         } finally { Disposer.dispose(dialog.disposable) }
     }
 
+    fun testTemplateListSwitchesDescriptionAndCode() {
+        val dialog = TemplateHelpDialog(project)
+        try {
+            val builder = dialog.javaClass.getDeclaredMethod("createCenterPanel").apply { isAccessible = true }
+            val splitter = builder.invoke(dialog) as com.intellij.ui.OnePixelSplitter
+            val list = descendants(splitter.firstComponent).filterIsInstance<javax.swing.JList<*>>().single()
+            val fields = descendants(splitter.secondComponent).filterIsInstance<com.intellij.ui.components.JBTextArea>().toList()
+            assertEquals(3, fields.size)
+            val description = fields.single { it.name == "template.description" }
+            val code = fields.single { it.name == "template.code" }
+            val preview = fields.single { it.name == "template.preview" }
+            val cards = com.google.gson.JsonParser.parseReader(
+                requireNotNull(javaClass.getResourceAsStream("/poptool-guide.json")).reader(Charsets.UTF_8)
+            ).asJsonArray.flatMap { section ->
+                val data = section.asJsonObject
+                if (data["id"].asString in setOf("syntax", "templates"))
+                    data.getAsJsonArray("cards").filter { it.asJsonObject.has("code") }
+                else emptyList()
+            }
+            assertEquals(cards.size, list.model.size)
+            assertEquals(0, list.selectedIndex)
+            assertFalse(description.isEditable)
+            assertFalse(code.isEditable)
+            // A new selection refreshes the live result from its defaults and keeps the original snippet.
+            for (index in listOf(0, cards.lastIndex, 1, 0)) {
+                if (index != list.selectedIndex) preview.text = "preview result"
+                list.selectedIndex = index
+                assertEquals(cards[index].asJsonObject["title"].asString, list.selectedValue.toString())
+                assertEquals(cards[index].asJsonObject["body"].asString, description.text)
+                assertEquals(cards[index].asJsonObject["code"].asString, code.text)
+                assertEquals(0, code.caretPosition)
+                val parameters = ParameterTemplates.synchronize(listOf(code.text), emptyList())
+                val defaults = parameters.associate { it.id to (it.defaultValue?.toString() ?: "") }
+                val expected = if (parameters.any { it.required && defaults.getValue(it.id).isBlank() }) ""
+                    else ParameterTemplates.render(code.text, defaults)
+                assertEquals(expected, preview.text)
+            }
+        } finally { Disposer.dispose(dialog.disposable) }
+    }
+
+    fun testTemplatePreviewUpdatesLiveAndLeavesSourceIntact() {
+        val dialog = TemplateHelpDialog(project)
+        try {
+            val builder = dialog.javaClass.getDeclaredMethod("createCenterPanel").apply { isAccessible = true }
+            val splitter = builder.invoke(dialog) as com.intellij.ui.OnePixelSplitter
+            val list = descendants(splitter.firstComponent).filterIsInstance<javax.swing.JList<*>>().single()
+            val detail = splitter.secondComponent
+            fun area(name: String) = descendants(detail).filterIsInstance<com.intellij.ui.components.JBTextArea>().single { it.name == name }
+            val code = area("template.code")
+            val preview = area("template.preview")
+            assertFalse(descendants(detail).filterIsInstance<javax.swing.JButton>().any { it.text == "预览参数替换" })
+            val source = code.text
+            assertEquals("", preview.text)
+            assertTrue(descendants(detail).filterIsInstance<javax.swing.JLabel>().any { it.text.contains("请填写") })
+            val input = descendants(detail).filterIsInstance<javax.swing.JTextField>().single()
+            input.text = "hello preview"
+            assertEquals("hello preview", preview.text)
+            assertEquals(source, code.text)
+            input.text = "updated"
+            assertEquals("updated", preview.text)
+            assertEquals(source, code.text)
+            list.selectedIndex = 1
+            assertEquals("默认值", preview.text)
+            list.selectedIndex = 2
+            assertEquals("1", preview.text)
+            val choice = descendants(detail).filterIsInstance<javax.swing.JComboBox<*>>().single()
+            choice.selectedIndex = 1
+            assertEquals("0", preview.text)
+            list.selectedIndex = 3
+            val file = descendants(detail).filterIsInstance<TextFieldWithBrowseButton>().single()
+            file.text = "/tmp/example.apk"
+            assertEquals("/tmp/example.apk", preview.text)
+            list.selectedIndex = 5
+            assertEquals("adb logcat \"*:I\"", preview.text)
+        } finally { Disposer.dispose(dialog.disposable) }
+    }
+
     fun testEnvironmentBindingsApplyAndReset() {
         val library = ScriptLibrary.getInstance()
         val oldState = library.state
@@ -71,6 +148,37 @@ class UiDslTest : LightPlatformTestCase() {
             settings.disposeUIResources()
             library.loadState(oldState)
             Files.deleteIfExists(file)
+        }
+    }
+
+    fun testDefaultEnvironmentPathsAreVisibleWithoutSavingOverrides() {
+        val library = ScriptLibrary.getInstance()
+        val oldState = library.state
+        val directory = Files.createTempDirectory("niko-default-path")
+        val python = Files.writeString(directory.resolve("python.exe"), "")
+        val settings = EnvironmentSettings(mapOf("PATH" to directory.toString()))
+        try {
+            library.setPaths(emptyMap())
+            val panel = settings.createPanel()
+            val fields = descendants(panel).filterIsInstance<TextFieldWithBrowseButton>().toList()
+            assertEquals("", fields[0].text)
+            assertEquals(python.toString(), (fields[0].textField as com.intellij.ui.components.JBTextField).emptyText.text)
+            assertTrue(descendants(panel).filterIsInstance<javax.swing.text.JTextComponent>().any { it.text.contains(python.toString()) })
+            assertFalse(panel.isModified())
+            assertTrue(panel.validateAll().isEmpty())
+            panel.apply()
+            assertTrue(library.paths().isEmpty())
+            fields[0].text = python.toString()
+            panel.apply()
+            assertEquals(python.toString(), library.paths()["python"])
+            fields[0].text = ""
+            panel.apply()
+            assertFalse(library.paths().containsKey("python"))
+            assertEquals(python.toString(), (fields[0].textField as com.intellij.ui.components.JBTextField).emptyText.text)
+        } finally {
+            settings.disposeUIResources()
+            library.loadState(oldState)
+            Files.delete(python); Files.delete(directory)
         }
     }
 

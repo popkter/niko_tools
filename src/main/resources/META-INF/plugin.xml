@@ -26,7 +26,7 @@
     </ol>
     <p>参数语法：<code>${名称}</code>、<code>${名称:默认值}</code>、
     <code>${模式:开启=1|关闭=0}</code>、<code>${文件@file}</code>、<code>${目录@dir}</code>。
-    可使用 <code>Var file = ${输入文件@file}</code> 声明并通过 <code>${file}</code> 引用。
+    可使用 <code>var file = ${输入文件@file}</code> 声明并通过 <code>${file}</code> 引用。
     编辑器中的“脚本模板与参数语法”提供参考代码与替换预览。替换是字面替换，不自动转义；任意文本建议通过参数数组传递。</p>
     <h3>环境与使用说明</h3>
     <p>最低 IntelliJ Platform 构建号为 242（IDEA 2024.2 系列），运行时要求 Java 21。
@@ -62,7 +62,7 @@
     </ol>
     <p>Templates include <code>${name}</code>, <code>${name:default}</code>,
     <code>${mode:On=1|Off=0}</code>, <code>${input@file}</code>, and <code>${output@dir}</code>.
-    Declare <code>Var file = ${InputFile@file}</code> and reference <code>${file}</code> elsewhere.
+    Declare <code>var file = ${InputFile@file}</code> and reference <code>${file}</code> elsewhere.
     The editor's template help includes examples and substitution previews. Substitution is literal without escaping; prefer Arguments JSON for arbitrary text.</p>
     <h3>Requirements and usage</h3>
     <p>Requires IntelliJ Platform build 242 or later (IDEA 2024.2 series) and a Java 21 runtime.

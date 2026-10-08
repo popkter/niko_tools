@@ -3,6 +3,10 @@
 ## [Unreleased]
 
 ### Changed
+- Recommend lowercase var declarations in templates and documentation while retaining Var and pVal compatibility.
+- Embed template parameter inputs and live substitution results below the source code; refresh instantly on text, choice, or path changes.
+- Display detected default executable paths in environment settings without saving overrides; default to Git Bash on Windows.
+- Show template help in a split view with a selectable template list and automatically updated syntax details.
 - Keep execution parameter dialogs open for repeated runs without blocking IDE operations; retain accept-and-close behavior for template previews.
 - Prefer valid input paths in file/directory choosers, falling back to the current project root.
 - Confirm deletion of the selected script with Delete (or Backspace on macOS).

@@ -9,7 +9,7 @@ import java.util.regex.Pattern
 /** Literal substitution, including PopTool legacy syntax. Never shell-escape values here. */
 object ParameterTemplates {
     private val placeholder = Pattern.compile("\\$\\{([^{}]+)}")
-    private val declaration = Pattern.compile("^[ \\t]*(?:Var|pVal)[ \\t]+([^\\s:=]+)[ \\t]*(?::|=)[ \\t]*\\$\\{([^{}\\r\\n]+)}[ \\t]*(?:\\r?\\n|$)", Pattern.MULTILINE)
+    private val declaration = Pattern.compile("^[ \\t]*(?:var|Var|pVal)[ \\t]+([^\\s:=]+)[ \\t]*(?::|=)[ \\t]*\\$\\{([^{}\\r\\n]+)}[ \\t]*(?:\\r?\\n|$)", Pattern.MULTILINE)
     private data class Parsed(val id: String, val defaultValue: String?, val kind: String, val options: List<Option>)
     private data class Definition(val label: String, val parsed: Parsed, val declared: Boolean)
 

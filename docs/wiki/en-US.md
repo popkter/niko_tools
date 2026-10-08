@@ -43,12 +43,12 @@ Open **Settings → NikoTools**, or use **环境路径 (Environment paths)** in 
 | --- | --- |
 | `python` | Python interpreter; choose a virtual environment's Python executable when needed |
 | `powershell` | PowerShell, usually `pwsh` or Windows `powershell.exe` |
-| `bash` | Bash; Windows users must provide a usable Bash installation |
+| `bash` | Bash; defaults to installed Git Bash on Windows |
 | `cmd` | Windows batch interpreter `cmd.exe` |
 | `adb` | Android debugging tool |
 | `scrcpy` | Android screen mirroring tool |
 
-Leave a path blank to use the **PATH inherited by the IDE process**. Resolution priority is the script's interpreter override, then the global plugin setting, then PATH. An invalid explicit path causes an error without fallback. Restart the IDE after changing system PATH when necessary. A virtual environment activated temporarily in the terminal is not automatically inherited by the plugin.
+Empty fields display the detected default path as gray placeholder text and in a note below; missing tools are explicitly marked. These displayed defaults are not saved as overrides. Default resolution uses the **PATH inherited by the IDE process**. On Windows, Bash defaults to Git Bash: first the Git installation selected by PATH, then common system and per-user installation directories. Other platforms use Bash on PATH. Resolution priority is the script's interpreter override, then the global plugin setting, then default environment resolution. An invalid explicit path causes an error without fallback. Restart the IDE after changing system PATH when necessary. A virtual environment activated temporarily in the terminal is not automatically inherited by the plugin.
 
 ## Your first run
 
@@ -91,7 +91,7 @@ For scripts with parameters, clicking 执行 (Run) keeps the parameter dialog op
 
 The table shows name, type, and description. Double-click a script to run it. Its context menu provides **执行脚本 (Run)**, **编辑脚本 (Edit)**, **分享脚本 (Share)**, and **删除脚本 (Delete)**. Use **Shift+F10** or the context-menu key for the selected row. Press **Delete** on a selected script to request deletion (Backspace also works on macOS). Deletion asks for confirmation. Sorting is persisted across projects: usage frequency is highest first, addition order is oldest first, and names sort ascending ignoring case. Usage counts actual process launches, including reruns; cancellation and launch failures do not count. Ties retain addition order. Clicking empty table space does not operate on a script.
 
-In the editor, **脚本模板与参数语法 (Script templates and parameter syntax)** opens reference examples, syntax help, parameter substitution previews, and code copying. A preview does not execute a command. Paste copied code into the body, choose the appropriate type and configuration, and save. There is no separate template library or “Save as template” action.
+In the editor, **脚本模板与参数语法 (Script templates and parameter syntax)** opens a split view: select a template in the left list to switch the explanation and syntax on the right, with embedded parameter inputs and live substitution results below the source code. Results update immediately when text, choices, or paths change. Copy the source or preview result separately. A preview does not execute a command. Paste copied code into the body, choose the appropriate type and configuration, and save. There is no separate template library or “Save as template” action.
 
 With the optional IDE Terminal plugin enabled, select text in a supported local terminal and use **新建 NikoTools 自定义脚本 (New NikoTools custom script)** from its context menu. The selection opens in the script editor and is not executed before saving. New scripts default to `powershell`; choose the appropriate type for Bash, Python, or other content. The Terminal plugin is not required for the script list or execution.
 
@@ -127,17 +127,17 @@ The plugin discovers placeholders in the **body, argument array, environment val
 
 Names accept letters, numbers, underscores, and Chinese characters, but not spaces. Repeated references share the same input. Conflicting repeated defaults, types, or choices cause errors. The `\|` in this Markdown table represents a literal `|` in actual scripts.
 
-### Var / pVal declarations
+### var declarations
 
 Declarations separate an internal identifier from the displayed label:
 
 ```text
-Var file = ${InputFile@file}
-Var mode = ${Mode:On=1|Off=0}
-pVal output = ${OutputDirectory@dir}
+var file = ${InputFile@file}
+var mode = ${Mode:On=1|Off=0}
+var output = ${OutputDirectory@dir}
 ```
 
-Use `${file}`, `${mode}`, and `${output}` elsewhere in the body or configuration. The identifier after the declaration keyword becomes the metadata `id`; the name inside braces becomes the form label. `Var` and `pVal` are case sensitive and must occupy their own lines. The plugin removes declaration lines before execution; they are not native shell or Python variable declarations.
+Use `${file}`, `${mode}`, and `${output}` elsewhere in the body or configuration. The identifier after the declaration keyword becomes the metadata `id`; the name inside braces becomes the form label. Use lowercase `var` for new declarations; legacy `Var` and `pVal` remain supported. Declarations must occupy their own lines. The plugin removes declaration lines before execution; they are not native shell or Python variable declarations.
 
 ### Browsing and substitution
 
@@ -331,8 +331,8 @@ Arguments JSON: `["${directory@dir}"]`. A path with spaces remains one argument.
 Type: `powershell`. Body:
 
 ```powershell
-Var message = ${Message:Hello}
-Var mode = ${Mode:On=1|Off=0}
+var message = ${Message:Hello}
+var mode = ${Mode:On=1|Off=0}
 Write-Output '${message}'
 Write-Output '${mode}'
 ```
@@ -348,7 +348,7 @@ Type: `process`. Body: `adb`. Arguments JSON: `["devices", "-l"]`. Listing devic
 Type: `bash`. Body:
 
 ```bash
-Var verbose = ${Verbose:False}
+var verbose = ${Verbose:False}
 printf 'Argument: %s\n' "$@"
 ```
 
