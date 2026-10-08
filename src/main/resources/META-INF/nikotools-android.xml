@@ -1,0 +1,6 @@
+<idea-plugin>
+  <extensions defaultExtensionNs="com.intellij">
+    <applicationService serviceInterface="com.poptools.scripts.AndroidDeviceProvider"
+                        serviceImplementation="com.poptools.scripts.AndroidPluginDeviceProvider"/>
+  </extensions>
+</idea-plugin>

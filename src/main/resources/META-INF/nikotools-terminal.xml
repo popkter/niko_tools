@@ -1,0 +1,11 @@
+<idea-plugin>
+  <extensions defaultExtensionNs="com.intellij">
+    <postStartupActivity implementation="com.poptools.scripts.TerminalIntegration"/>
+  </extensions>
+  <actions>
+    <action id="PopTool.NewFromTerminal" class="com.poptools.scripts.NewFromTerminalAction" text="新建 NikoTools 自定义脚本" description="将终端选区添加到新建脚本正文">
+      <add-to-group group-id="Terminal.OutputContextMenu" anchor="last"/>
+      <add-to-group group-id="Terminal.PromptContextMenu" anchor="last"/>
+    </action>
+  </actions>
+</idea-plugin>

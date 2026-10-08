@@ -1,0 +1,98 @@
+<idea-plugin>
+  <id>com.poptools.scripts</id>
+  <name>NikoTools</name>
+  <version>0.1.1</version>
+  <vendor>PopTool</vendor>
+  <description><![CDATA[
+    <p>NikoTools runs custom scripts with parameter forms and a native IDE Run console.</p>
+    <h2>NikoTools — 自定义脚本工具</h2>
+    <p>将常用命令保存为脚本，在 IDE 中填写参数并执行，在原生 Run 控制台查看输出。
+    适用于项目工具、文件处理和 Android 调试。插件使用 Kotlin 与官方 Kotlin UI DSL。</p>
+    <h3>主要功能</h3>
+    <ul>
+      <li>支持 PowerShell、Python、Bash、Windows BAT，以及直接启动可执行程序的 process 类型。</li>
+      <li>自动从模板生成参数表单，支持文本、默认值、下拉、文件和目录；高级元数据支持数字、布尔、多行、密码等输入。</li>
+      <li>文件和目录选择器默认从当前 IDE 窗口的项目根目录打开；工作目录默认使用当前项目根目录。</li>
+      <li>支持剪贴板分享与导入、脚本目录批量迁移、终端选区创建脚本（需可选 Terminal 插件）。</li>
+      <li>原生 Run 控制台显示输出、错误和退出码，提供再次运行、停止及超时控制。</li>
+      <li>自动尝试读取 IDE 所选 Android 设备并提供 ANDROID_SERIAL；普通脚本无需连接 Android 设备。</li>
+    </ul>
+    <h3>快速开始</h3>
+    <ol>
+      <li>打开 Tools → NikoTools，点击“新建脚本”，填写名称并选择执行类型。</li>
+      <li>编写脚本正文，例如 Python 的 <code>import sys; print('Hello, ' + sys.argv[1])</code>。</li>
+      <li>展开“执行配置”，将参数数组 JSON 设为 <code>["${姓名:World}"]</code>，保存脚本。</li>
+      <li>双击脚本，填写参数并执行，在 Run 窗口查看结果。</li>
+    </ol>
+    <p>参数语法：<code>${名称}</code>、<code>${名称:默认值}</code>、
+    <code>${模式:开启=1|关闭=0}</code>、<code>${文件@file}</code>、<code>${目录@dir}</code>。
+    可使用 <code>Var file = ${输入文件@file}</code> 声明并通过 <code>${file}</code> 引用。
+    编辑器中的“脚本模板与参数语法”提供参考代码与替换预览。替换是字面替换，不自动转义；任意文本建议通过参数数组传递。</p>
+    <h3>环境与使用说明</h3>
+    <p>最低 IntelliJ Platform 构建号为 242（IDEA 2024.2 系列），运行时要求 Java 21。
+    面向 Android Studio、IntelliJ IDEA、PyCharm 等兼容平台的 IDE。
+    插件不附带解释器、adb 或 scrcpy，请自行安装实际使用的工具，在 Settings → NikoTools 配置路径，或使用 IDE 继承的 PATH。</p>
+    <p>工作目录、解释器、工具依赖、输出编码、超时、参数数组和环境变量均可按需配置。
+    环境变量 JSON 与参数元数据通常保持默认即可。process 正文只填可执行文件名或路径，参数填写到 JSON 数组；不解析 Shell 管道。</p>
+    <p>Android 与 Terminal 均为可选依赖。取得唯一在线的 IDE 所选设备时自动注入序列号；
+    没有可用设备时普通脚本仍可启动。显式 android_device 依赖或必填设备参数才强制要求设备。
+    脚本库和工具路径为 IDE 用户级配置，跨项目共享；运行中不支持交互式标准输入。</p>
+    <p>完整中英文 Wiki 位于源码仓库的 <code>docs/wiki</code> 目录。
+    右键脚本可编辑、分享或删除；顶部“批量操作”可备份和迁移脚本目录。
+    分享会移除默认值与解释器路径，但保留脚本中的其他字面内容；目录导出保留默认值。</p>
+
+    <h2>NikoTools — Custom Script Tools</h2>
+    <p>Save recurring commands, collect inputs in the IDE, and inspect results in the native Run console.
+    Useful for project utilities, file processing, and Android debugging. Built with Kotlin and the official Kotlin UI DSL.</p>
+    <h3>Features</h3>
+    <ul>
+      <li>Run PowerShell, Python, Bash, Windows batch scripts, or launch an executable directly with process.</li>
+      <li>Generate parameter forms from templates: text, defaults, choices, files, and directories. Advanced metadata adds numbers, booleans, multiline and password inputs.</li>
+      <li>File and directory browsing starts at the current IDE window's project root. The default working directory is also the current project root.</li>
+      <li>Share and import clipboard JSON, migrate script directories, and create scripts from terminal selections with the optional Terminal plugin.</li>
+      <li>View output, errors, and exit codes in Run tabs, with rerun, stop, and timeout controls.</li>
+      <li>Automatically read the IDE-selected Android device when available and supply ANDROID_SERIAL. Ordinary scripts do not require an Android device.</li>
+    </ul>
+    <h3>Quick start</h3>
+    <ol>
+      <li>Open Tools → NikoTools. Click 新建脚本 (New script), enter a name, and select an execution type.</li>
+      <li>Enter a body, for example Python: <code>import sys; print('Hello, ' + sys.argv[1])</code>.</li>
+      <li>Expand 执行配置 (Execution configuration), set Arguments JSON to <code>["${name:World}"]</code>, and save.</li>
+      <li>Double-click the script, fill in the form, and inspect results in Run.</li>
+    </ol>
+    <p>Templates include <code>${name}</code>, <code>${name:default}</code>,
+    <code>${mode:On=1|Off=0}</code>, <code>${input@file}</code>, and <code>${output@dir}</code>.
+    Declare <code>Var file = ${InputFile@file}</code> and reference <code>${file}</code> elsewhere.
+    The editor's template help includes examples and substitution previews. Substitution is literal without escaping; prefer Arguments JSON for arbitrary text.</p>
+    <h3>Requirements and usage</h3>
+    <p>Requires IntelliJ Platform build 242 or later (IDEA 2024.2 series) and a Java 21 runtime.
+    Targets Android Studio, IntelliJ IDEA, PyCharm, and other compatible IntelliJ Platform IDEs.
+    Interpreters, adb, and scrcpy are not bundled. Install the tools you use and configure executable paths in Settings → NikoTools, or use the IDE's inherited PATH.</p>
+    <p>Working directory, interpreter, required tools, output encoding, timeout, arguments, and environment overrides are optional configuration.
+    Environment JSON and parameter metadata can usually retain their defaults. A process body is one executable name or path; use the argument array for its arguments. Shell pipelines are not interpreted.</p>
+    <p>Android and Terminal integrations are optional. A single online IDE-selected device supplies an automatic serial when available;
+    ordinary scripts still launch without a usable device. Only an explicit android_device requirement or required device parameter enforces device selection.
+    Scripts and tool paths are shared across projects within the IDE configuration. Interactive process stdin is unsupported.</p>
+    <p>The full Chinese and English Wiki is in the source repository's <code>docs/wiki</code> directory.
+    Right-click scripts to edit, share, or delete. Use 批量操作 (Batch operations) for directory backup and migration.
+    Sharing removes defaults and interpreter overrides but preserves other literal content; directory exports preserve defaults.
+    The current UI labels are Chinese; the English Wiki includes translations.</p>
+    <p>MIT License. Copyright (c) 2026 popkter.
+    <a href="https://github.com/popkter/PopToolProject/tree/develop/plugins/jetbrains">Source code / 源码</a> ·
+    <a href="https://github.com/popkter/PopToolProject/blob/develop/plugins/jetbrains/LICENSE">License / 许可证</a>.</p>
+  ]]></description>
+  <idea-version since-build="242"/>
+  <depends>com.intellij.modules.platform</depends>
+  <depends optional="true" config-file="nikotools-terminal.xml">org.jetbrains.plugins.terminal</depends>
+  <depends optional="true" config-file="nikotools-android.xml">org.jetbrains.android</depends>
+  <extensions defaultExtensionNs="com.intellij">
+    <applicationService serviceImplementation="com.poptools.scripts.ScriptLibrary"/>
+    <applicationConfigurable instance="com.poptools.scripts.EnvironmentSettings" id="poptools.environments" displayName="NikoTools"/>
+    <toolWindow id="NikoTools" anchor="right" icon="/icons/nikoTools.svg" factoryClass="com.poptools.scripts.ScriptToolWindow"/>
+  </extensions>
+  <actions>
+    <action id="PopTool.ManageScripts" class="com.poptools.scripts.ManageScriptsAction" text="NikoTools" icon="/icons/nikoTools.svg">
+      <add-to-group group-id="ToolsMenu" anchor="last"/>
+    </action>
+  </actions>
+</idea-plugin>

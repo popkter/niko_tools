@@ -1,0 +1,8 @@
+.gradle/
+.idea/
+.intellijPlatform/
+build/
+.DS_Store
+__pycache__/
+*.pem
+*.key
