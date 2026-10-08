@@ -53,7 +53,7 @@ Windows：
 .\gradlew.bat build -PlocalIdePath='你的 IDEA 2024.2 安装目录'
 ```
 
-构建产物为 `build/distributions/NikoTools-0.1.1.zip`，插件版本来自 `gradle.properties`。在目标 IDE 的 **Settings → Plugins → 齿轮 → Install Plugin from Disk** 选择 ZIP，按提示重启，然后打开 **Tools → NikoTools**。
+构建产物为 `build/distributions/NikoTools-0.1.2.zip`，插件版本来自 `gradle.properties`。在目标 IDE 的 **Settings → Plugins → 齿轮 → Install Plugin from Disk** 选择 ZIP，按提示重启，然后打开 **Tools → NikoTools**。
 
 构建逻辑统一由 Gradle 管理，无需 Bash 或 PowerShell 包装脚本。`build` 执行检查并生成插件 ZIP；`assemble` 只打包，`check` 只检查，`buildPlugin` 也可直接用于生成 ZIP。Gradle Wrapper 的 `gradlew` / `gradlew.bat` 是各系统的标准启动器；Windows 启动器可在 cmd 中运行，无需安装 PowerShell。
 
@@ -83,7 +83,17 @@ Windows：
 
 首次发布通过 [JetBrains Marketplace](https://plugins.jetbrains.com/) 手动上传 `build/distributions/NikoTools-0.1.1.zip`，创建 Vendor 并补齐联系邮箱、网站、MIT 许可证和公开源码链接。迁移到独立仓库后，需要更新 `plugin.xml` 中的源码及许可证链接。
 
-后续递增 `gradle.properties` 的 `version` 并构建。Gradle 已提供 `signPlugin`、`publishPlugin` 任务；签名使用 `CERTIFICATE_CHAIN`、`PRIVATE_KEY`、`PRIVATE_KEY_PASSWORD`，上传使用 `PUBLISH_TOKEN` 环境变量。密钥不写入仓库。GitHub workflow 只构建，不自动上传 Marketplace。
+后续更新采用 GitHub 自动发布：
+
+1. 在仓库 **Settings → Secrets and variables → Actions** 添加 Repository secret `PUBLISH_TOKEN`，内容为 Marketplace 的发布令牌。
+2. 将 `gradle.properties` 中的 `version` 递增为 `X.Y.Z`（例如 `0.1.2` → `0.1.3`），更新版本说明，并提交到 `main`。可直接在 GitHub 编辑该文件，也可通过 PR 合并。
+3. workflow 比较推送前后的版本号；版本递增时，等待 `build` 和 `newer-platform-tests` 全部成功，再执行 `./gradlew --no-daemon publishPlugin` 上传稳定版。普通提交、PR 和其他分支不会上传；降低版本号会使检查失败。
+
+令牌只注入发布步骤，不写入仓库。上传后仍需等待 Marketplace 验证或审核。版本号来自 `gradle.properties`，Gradle 会自动覆盖打包后的 `plugin.xml` 版本，无需每次手动修改 XML。
+
+上传失败时可重新运行失败的 job；也可在 **Actions → Build and Publish NikoTools → Run workflow** 选择 `main` 并勾选 `publish_marketplace`，在两组检查通过后重试当前版本。已经上传成功的版本不能重复上传，请先增加版本号。`verify_plugin` 仍用于选择额外的完整 Plugin Verifier 检查。
+
+本地也可执行 `publishPlugin`。项目保留 `signPlugin` 签名配置，使用 `CERTIFICATE_CHAIN`、`PRIVATE_KEY`、`PRIVATE_KEY_PASSWORD`；当前自动上传读取 `PUBLISH_TOKEN`。
 
 ## 使用
 

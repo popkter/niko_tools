@@ -2,7 +2,7 @@
 
 [语言选择](README.md) · [English](en-US.md) · [项目 README](../../README.md)
 
-本指南对应 **0.1.1**，依据当前插件实现编写。NikoTools 将常用脚本保存为列表，执行前生成参数表单，并在 IDE 原生 Run 控制台显示结果。脚本库与环境路径属于 IDE 用户级配置，跨项目共享；执行时的工作目录、参数文件选择和 Android 设备来自当前项目窗口。
+本指南对应 **0.1.2**，依据当前插件实现编写。NikoTools 将常用脚本保存为列表，执行前生成参数表单，并在 IDE 原生 Run 控制台显示结果。脚本库与环境路径属于 IDE 用户级配置，跨项目共享；执行时的工作目录、参数文件选择和 Android 设备来自当前项目窗口。
 
 ## 目录
 
@@ -26,7 +26,7 @@
 
 最低平台版本为 **242（IntelliJ IDEA 2024.2 系列）**，字节码要求 Java 21；使用符合要求的 IDE 自带运行时即可，不需要为了使用插件单独配置开发 JDK。项目以 IDEA 2024.2.6 为构建基线，面向 Android Studio、IntelliJ IDEA、PyCharm 等 IntelliJ Platform IDE。不同产品的版本号不完全相同，应以平台构建号和实际兼容性为准。
 
-1. 获取项目构建的 `NikoTools-0.1.1.zip`；本地构建方法见[项目 README](../../README.md#开发和本地构建)。
+1. 获取项目构建的 `NikoTools-0.1.2.zip`；本地构建方法见[项目 README](../../README.md#开发和本地构建)。
 2. 打开 IDE 的 **Settings / Preferences → Plugins → 齿轮 → Install Plugin from Disk**，选择 ZIP。
 3. 按 IDE 提示重启，打开项目，通过 **Tools → NikoTools** 或侧边 NikoTools 图标打开工具窗口。
 4. 插件发布到 Marketplace 后，也可通过对应 Marketplace 页面安装。项目中的发布配置并不表示已经上架。

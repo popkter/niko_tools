@@ -1,8 +1,12 @@
 # Changelog
 
-## [Unreleased]
+## Unreleased
+
+## 0.1.2
 
 ### Changed
+
+- Automatically publish version increases on main to JetBrains Marketplace after all CI builds and tests succeed.
 - Recommend lowercase var declarations in templates and documentation while retaining Var and pVal compatibility.
 - Embed template parameter inputs and live substitution results below the source code; refresh instantly on text, choice, or path changes.
 - Display detected default executable paths in environment settings without saving overrides; default to Git Bash on Windows.
@@ -21,16 +25,18 @@
 - Move JUnit entry points to Kotlin and add migration checks for legacy JSON, persistent XML and extension constructors.
 - Update the isolated Windows smoke launcher to package Kotlin implementation classes.
 
-## [0.1.1]
+## 0.1.1
 
 ### Changed
+
 - Compile against IntelliJ Platform 242 (IDEA 2024.2) with Java 21.
 - Isolate newer Terminal and Android APIs behind optional compatibility adapters.
 - Register the Reworked Terminal menu only when that menu exists.
 
-## [0.1.0]
+## 0.1.0
 
 ### Added
+
 - Custom script management, parameter forms, import/export and execution console.
 - Optional Terminal selection and Android device integration.
 - Gradle Wrapper build, tests, IDE sandbox, compatibility verification and Marketplace publishing tasks.

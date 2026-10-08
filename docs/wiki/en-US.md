@@ -2,7 +2,7 @@
 
 [Languages](README.md) · [中文](zh-CN.md) · [Project README](../../README.md)
 
-This guide describes **0.1.1** and reflects the current implementation. NikoTools saves recurring scripts, generates parameter forms before execution, and displays results in the IDE's native Run console. Scripts and tool paths are shared across projects in the same IDE configuration. Working directories, file browsing, and Android device selection use the current project window.
+This guide describes **0.1.2** and reflects the current implementation. NikoTools saves recurring scripts, generates parameter forms before execution, and displays results in the IDE's native Run console. Scripts and tool paths are shared across projects in the same IDE configuration. Working directories, file browsing, and Android device selection use the current project window.
 
 The current UI uses Chinese labels. This guide quotes those labels alongside their English meaning so you can find the relevant controls.
 
@@ -28,7 +28,7 @@ The current UI uses Chinese labels. This guide quotes those labels alongside the
 
 The minimum IntelliJ Platform build is **242 (IntelliJ IDEA 2024.2 series)**. The plugin requires a Java 21 runtime; a compatible IDE's bundled runtime is sufficient for use. You do not need to configure a development JDK just to run the plugin. The build baseline is IDEA 2024.2.6, targeting Android Studio, IntelliJ IDEA, PyCharm, and other IntelliJ Platform IDEs. Product version numbers differ, so check platform build numbers and actual compatibility.
 
-1. Obtain the built `NikoTools-0.1.1.zip`. For local builds, see the [project README](../../README.md).
+1. Obtain the built `NikoTools-0.1.2.zip`. For local builds, see the [project README](../../README.md).
 2. Open **Settings / Preferences → Plugins → gear icon → Install Plugin from Disk** and select the ZIP.
 3. Restart if prompted. Open a project and use **Tools → NikoTools** or its sidebar icon.
 4. Once the plugin is published on Marketplace, it can also be installed through its listing. The publishing configuration in this project does not confirm that a listing is already available.

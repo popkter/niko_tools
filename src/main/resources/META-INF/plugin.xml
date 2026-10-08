@@ -1,7 +1,7 @@
 <idea-plugin>
   <id>com.poptools.scripts</id>
   <name>NikoTools</name>
-  <version>0.1.1</version>
+  <version>0.1.2</version>
   <vendor>PopTool</vendor>
   <description><![CDATA[
     <p>NikoTools runs custom scripts with parameter forms and a native IDE Run console.</p>
