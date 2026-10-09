@@ -2,7 +2,7 @@
 
 [Languages](README.md) · [中文](zh-CN.md) · [Project README](../../README.md)
 
-This guide describes **0.1.2** and reflects the current implementation. NikoTools saves recurring scripts, generates parameter forms before execution, and displays results in the IDE's native Run console. Scripts and tool paths are shared across projects in the same IDE configuration. Working directories, file browsing, and Android device selection use the current project window.
+This guide describes **0.1.3** and reflects the current implementation. NikoTools saves recurring scripts, generates parameter forms before execution, and displays results in the IDE's native Run console. Scripts and tool paths are shared across projects in the same IDE configuration. Working directories, file browsing, and Android device selection use the current project window.
 
 The current UI uses Chinese labels. This guide quotes those labels alongside their English meaning so you can find the relevant controls.
 
@@ -28,7 +28,7 @@ The current UI uses Chinese labels. This guide quotes those labels alongside the
 
 The minimum IntelliJ Platform build is **242 (IntelliJ IDEA 2024.2 series)**. The plugin requires a Java 21 runtime; a compatible IDE's bundled runtime is sufficient for use. You do not need to configure a development JDK just to run the plugin. The build baseline is IDEA 2024.2.6, targeting Android Studio, IntelliJ IDEA, PyCharm, and other IntelliJ Platform IDEs. Product version numbers differ, so check platform build numbers and actual compatibility.
 
-1. Obtain the built `NikoTools-0.1.2.zip`. For local builds, see the [project README](../../README.md).
+1. Obtain the built `NikoTools-0.1.3.zip`. For local builds, see the [project README](../../README.md).
 2. Open **Settings / Preferences → Plugins → gear icon → Install Plugin from Disk** and select the ZIP.
 3. Restart if prompted. Open a project and use **Tools → NikoTools** or its sidebar icon.
 4. Once the plugin is published on Marketplace, it can also be installed through its listing. The publishing configuration in this project does not confirm that a listing is already available.
@@ -87,7 +87,7 @@ The toolbar has five actions. Hover over an icon to see its label.
 | 排序 — Sort | Sort by usage frequency, addition order, or name |
 | 环境路径 — Environment paths | Configure global interpreters and tools |
 
-For scripts with parameters, clicking 执行 (Run) keeps the parameter dialog open so you can edit inputs and run again. Click 关闭 (Close) to dismiss it. The dialog allows other IDE operations; reopening the same script in the same project focuses its existing dialog, and an active run still prevents duplicate launches.
+For scripts with parameters, 执行后保留弹窗 (Keep dialog open after running) is unchecked by default, so clicking 执行 (Run) closes the parameter dialog. Check it to retain inputs and run again. Scripts without parameters run directly without opening a dialog. Click 关闭 (Close) to dismiss it. The dialog allows other IDE operations; reopening the same script in the same project focuses its existing dialog, and an active run still prevents duplicate launches.
 
 The table shows name, type, and description. Double-click a script to run it. Its context menu provides **执行脚本 (Run)**, **编辑脚本 (Edit)**, **分享脚本 (Share)**, and **删除脚本 (Delete)**. Use **Shift+F10** or the context-menu key for the selected row. Press **Delete** on a selected script to request deletion (Backspace also works on macOS). Deletion asks for confirmation. Sorting is persisted across projects: usage frequency is highest first, addition order is oldest first, and names sort ascending ignoring case. Usage counts actual process launches, including reruns; cancellation and launch failures do not count. Ties retain addition order. Clicking empty table space does not operate on a script.
 

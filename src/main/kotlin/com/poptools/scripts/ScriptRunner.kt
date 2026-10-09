@@ -61,20 +61,22 @@ object ScriptRunner {
         }
     }
 
-    private fun execute(project: Project, script: ScriptDefinition, values: Map<String, String>) {
-        if (project.isDisposed || alreadyRunning(project, script.id)) return
+    private fun execute(project: Project, script: ScriptDefinition, values: Map<String, String>): Boolean {
+        if (project.isDisposed || alreadyRunning(project, script.id)) return false
         try {
             // Re-read device selection and environment for every execution from the retained form.
             val serial = AndroidDevices.serialForScript(project, script)
-            if (script.presentation.confirm_before_run && Messages.showYesNoDialog(project, "执行脚本“${script.title}”？", "确认执行", Messages.getQuestionIcon()) != Messages.YES) return
+            if (script.presentation.confirm_before_run && Messages.showYesNoDialog(project, "执行脚本“${script.title}”？", "确认执行", Messages.getQuestionIcon()) != Messages.YES) return false
             val settings = ScriptLibrary.getInstance().paths()
             val base = project.basePath
-            if (alreadyRunning(project, script.id)) return
+            if (alreadyRunning(project, script.id)) return false
             starting(project).add(script.id)
             ApplicationManager.getApplication().executeOnPooledThread { launch(project, script, values, settings, base, serial) }
+            return true
         } catch (e: Exception) {
             starting(project).remove(script.id)
             Messages.showErrorDialog(project, e.message ?: e.toString(), "脚本无法运行")
+            return false
         }
     }
 

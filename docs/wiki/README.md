@@ -9,9 +9,9 @@ NikoTools is a custom script plugin for IntelliJ Platform IDEs. Save recurring c
 - [项目 README / Project README](../../README.md)
 - [MIT License](../../LICENSE)
 
-本文档对应当前项目版本 **0.1.2**。界面当前使用中文；英文指南保留实际界面名称并给出英文解释。
+本文档对应当前项目版本 **0.1.3**。界面当前使用中文；英文指南保留实际界面名称并给出英文解释。
 
-These guides describe version **0.1.2**. The current plugin UI uses Chinese labels; the English guide includes their translations.
+These guides describe version **0.1.3**. The current plugin UI uses Chinese labels; the English guide includes their translations.
 
 ## Marketplace / IDE Overview
 

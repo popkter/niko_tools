@@ -12,13 +12,14 @@ import java.awt.Dimension
 import java.math.BigDecimal
 import java.math.BigInteger
 import javax.swing.JComponent
+import javax.swing.JCheckBox
 
 class ParameterDialog @JvmOverloads constructor(
     private val project: Project,
     script: ScriptDefinition,
     private val previous: Map<String, String>,
     buttonText: String = "执行",
-    private val onExecute: ((Map<String, String>) -> Unit)? = null
+    private val onExecute: ((Map<String, String>) -> Boolean)? = null
 ) : DialogWrapper(project) {
     private val parameters = script.parameters
     private val scriptId = script.id
@@ -26,6 +27,7 @@ class ParameterDialog @JvmOverloads constructor(
     private val values = linkedMapOf<String, String>()
     private val readers = linkedMapOf<String, () -> String>()
     private lateinit var form: DialogPanel
+    private var keepOpen: JCheckBox? = null
     init {
         title = "运行参数 — ${script.title}"
         setOKButtonText(buttonText)
@@ -80,6 +82,9 @@ class ParameterDialog @JvmOverloads constructor(
                 }
             }
         }
+        if (onExecute != null) row {
+            keepOpen = checkBox("执行后保留弹窗").component
+        }
         }
         return JBScrollPane(form).apply { preferredSize = Dimension(680, (parameters.size * 55).coerceIn(130, 550)) }
     }
@@ -96,7 +101,10 @@ class ParameterDialog @JvmOverloads constructor(
                 val value = readers.getValue(p.id)()
                 validateValue(p, value); values[p.id] = value
             }
-            if (onExecute != null) onExecute.invoke(values()) else super.doOKAction()
+            setErrorText(null)
+            if (onExecute != null) {
+                if (onExecute.invoke(values()) && keepOpen?.isSelected != true) close(OK_EXIT_CODE)
+            } else super.doOKAction()
         } catch (e: Exception) { setErrorText(e.message ?: "参数无效") }
     }
     fun values(): Map<String, String> = LinkedHashMap(values)

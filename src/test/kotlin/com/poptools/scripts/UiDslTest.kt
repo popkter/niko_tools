@@ -16,7 +16,11 @@ class UiDslTest : LightPlatformTestCase() {
         val dialog = ParameterDialog(project, script, emptyMap(), onExecute = { runs.add(it) })
         try {
             val builder = dialog.javaClass.getDeclaredMethod("createCenterPanel").apply { isAccessible = true }
-            val field = descendants(builder.invoke(dialog) as Component).filterIsInstance<javax.swing.JTextField>().single()
+            val content = builder.invoke(dialog) as Component
+            val field = descendants(content).filterIsInstance<javax.swing.JTextField>().single()
+            val keepOpen = descendants(content).filterIsInstance<javax.swing.JCheckBox>().single { it.text == "执行后保留弹窗" }
+            assertFalse(keepOpen.isSelected)
+            keepOpen.isSelected = true
             dialog.performOKAction()
             assertEquals(listOf(mapOf("name" to "hello")), runs)
             assertFalse(dialog.isOK)
@@ -29,6 +33,33 @@ class UiDslTest : LightPlatformTestCase() {
             dialog.performOKAction()
             assertEquals(2, runs.size)
             assertFalse(Disposer.isDisposed(dialog.disposable))
+        } finally { Disposer.dispose(dialog.disposable) }
+    }
+
+    fun testExecutionDialogClosesByDefaultAfterAcceptedRun() {
+        val script = ScriptDefinition().also { it.executor.command = "echo hello" }
+        script.parameters = ParameterTemplates.synchronize(listOf("${'$'}{name:hello}"), emptyList())
+        var submitted: Map<String, String>? = null
+        val dialog = ParameterDialog(project, script, emptyMap(), onExecute = { submitted = it; true })
+        try {
+            dialog.performOKAction()
+            assertEquals(mapOf("name" to "hello"), submitted)
+            assertTrue(dialog.isOK)
+        } finally { Disposer.dispose(dialog.disposable) }
+    }
+
+    fun testExecutionDialogStaysOpenWhenRunIsNotAccepted() {
+        val script = ScriptDefinition().also { it.executor.command = "echo hello" }
+        script.parameters = ParameterTemplates.synchronize(listOf("${'$'}{name:hello}"), emptyList())
+        var accepted = false
+        val dialog = ParameterDialog(project, script, emptyMap(), onExecute = { accepted })
+        try {
+            dialog.performOKAction()
+            assertFalse(dialog.isOK)
+            assertFalse(Disposer.isDisposed(dialog.disposable))
+            accepted = true
+            dialog.performOKAction()
+            assertTrue(dialog.isOK)
         } finally { Disposer.dispose(dialog.disposable) }
     }
 
@@ -233,12 +264,11 @@ class UiDslTest : LightPlatformTestCase() {
     fun testFileChoosersPreferExistingInputAndFallBackToOwningProjectRoot() {
         val directory = Files.createTempDirectory("niko-project-chooser")
         val a = Files.createDirectory(directory.resolve("A"))
-        val b = Files.createDirectory(directory.resolve("B"))
+        val b = Files.createDirectory(a.resolve("B"))
         val file = Files.writeString(b.resolve("input.txt"), "input")
         val fs = com.intellij.openapi.vfs.LocalFileSystem.getInstance()
         val rootA = requireNotNull(fs.refreshAndFindFileByNioFile(a))
         val rootB = requireNotNull(fs.refreshAndFindFileByNioFile(b))
-        val input = requireNotNull(fs.refreshAndFindFileByNioFile(file))
         fun projectAt(path: java.nio.file.Path): com.intellij.openapi.project.Project = java.lang.reflect.Proxy.newProxyInstance(
             javaClass.classLoader, arrayOf(com.intellij.openapi.project.Project::class.java)
         ) { _, method, _ ->
@@ -255,9 +285,13 @@ class UiDslTest : LightPlatformTestCase() {
                 field.text = b.toString()
                 assertEquals(rootB, ProjectRootBrowseListener(descriptor, projectA, field).getInitialFile())
                 field.text = file.toString()
-                assertEquals(input, ProjectRootBrowseListener(descriptor, projectA, field).getInitialFile())
+                assertEquals(rootB, ProjectRootBrowseListener(descriptor, projectA, field).getInitialFile())
+                field.text = "B/input.txt"
+                assertEquals(rootB, ProjectRootBrowseListener(descriptor, projectA, field).getInitialFile())
+                field.text = "\"$file\""
+                assertEquals(rootB, ProjectRootBrowseListener(descriptor, projectA, field).getInitialFile())
                 field.text = "input.txt"
-                assertEquals(input, ProjectRootBrowseListener(descriptor, projectB, field).getInitialFile())
+                assertEquals(rootB, ProjectRootBrowseListener(descriptor, projectB, field).getInitialFile())
                 for (invalid in listOf("", "   ", b.resolve("missing.txt").toString(), "bad\u0000path")) {
                     field.text = invalid
                     assertEquals(rootA, ProjectRootBrowseListener(descriptor, projectA, field).getInitialFile())
@@ -270,6 +304,55 @@ class UiDslTest : LightPlatformTestCase() {
         } finally {
             field.dispose()
             Files.delete(file); Files.delete(b); Files.delete(a); Files.delete(directory)
+        }
+    }
+
+    fun testFileChooserExplicitDirectoryOverridesRememberedProjectRoot() {
+        val directory = Files.createTempDirectory("niko-chooser-history")
+        val b = Files.createDirectory(directory.resolve("B"))
+        val file = Files.writeString(b.resolve("C.txt"), "input")
+        val fs = com.intellij.openapi.vfs.LocalFileSystem.getInstance()
+        val root = requireNotNull(fs.refreshAndFindFileByNioFile(directory))
+        val parent = requireNotNull(fs.refreshAndFindFileByNioFile(b))
+        val oldSelection = com.intellij.openapi.fileChooser.impl.FileChooserUtil.getLastOpenedFile(project)
+        val field = TextFieldWithBrowseButton().apply { text = file.toString() }
+        try {
+            com.intellij.openapi.fileChooser.impl.FileChooserUtil.setLastOpenedFile(project, root)
+            val descriptor = com.intellij.openapi.fileChooser.FileChooserDescriptorFactory.createSingleFileDescriptor()
+            descriptor.putUserData(com.intellij.openapi.fileChooser.PathChooserDialog.PREFER_LAST_OVER_EXPLICIT, true)
+            val listener = ProjectRootBrowseListener(descriptor, project, field)
+            val actualDescriptor = com.intellij.openapi.ui.BrowseFolderRunnable::class.java
+                .getDeclaredField("myFileChooserDescriptor").apply { isAccessible = true }.get(listener)
+                as com.intellij.openapi.fileChooser.FileChooserDescriptor
+            assertEquals(parent, listener.getInitialFile())
+            assertEquals(parent, com.intellij.openapi.fileChooser.impl.FileChooserUtil.getFileToSelect(
+                actualDescriptor, project, listener.getInitialFile()))
+            // Configuring this field must not alter another caller's descriptor.
+            assertEquals(true, descriptor.getUserData(com.intellij.openapi.fileChooser.PathChooserDialog.PREFER_LAST_OVER_EXPLICIT))
+        } finally {
+            com.intellij.openapi.fileChooser.impl.FileChooserUtil.setLastOpenedFile(project, oldSelection)
+            field.dispose()
+            Files.delete(file); Files.delete(b); Files.delete(directory)
+        }
+    }
+
+    fun testFileChooserFindsParentOfBuildOutputNotYetInVfs() {
+        val directory = Files.createTempDirectory("niko-generated-apk")
+        val fs = com.intellij.openapi.vfs.LocalFileSystem.getInstance()
+        val parent = requireNotNull(fs.refreshAndFindFileByNioFile(directory))
+        val apk = directory.resolve("new-output.apk")
+        // Cache the directory while it is empty, then create a build output outside the IDE.
+        assertTrue(parent.children.isEmpty())
+        Files.writeString(apk, "apk")
+        val field = TextFieldWithBrowseButton().apply { text = apk.toString() }
+        try {
+            assertNull(parent.findChild(apk.fileName.toString()))
+            val listener = ProjectRootBrowseListener(
+                com.intellij.openapi.fileChooser.FileChooserDescriptorFactory.createSingleFileDescriptor(), project, field)
+            assertEquals(parent, listener.getInitialFile())
+        } finally {
+            field.dispose()
+            Files.delete(apk); Files.delete(directory)
         }
     }
 

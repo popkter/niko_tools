@@ -2,6 +2,13 @@
 
 ## Unreleased
 
+## 0.1.3
+
+### Changed
+
+- Open a file parameter's parent directory explicitly, honor it over chooser history, and accept quoted paths.
+- Add an unchecked-by-default option to retain the parameter dialog after running; parameterless scripts continue to run directly.
+
 ## 0.1.2
 
 ### Changed
