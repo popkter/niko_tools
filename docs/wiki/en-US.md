@@ -2,7 +2,7 @@
 
 [Languages](README.md) · [中文](zh-CN.md) · [Project README](../../README.md)
 
-This guide describes **0.1.3** and reflects the current implementation. NikoTools saves recurring scripts, generates parameter forms before execution, and displays results in the IDE's native Run console. Scripts and tool paths are shared across projects in the same IDE configuration. Working directories, file browsing, and Android device selection use the current project window.
+This guide describes **0.1.4** and reflects the current implementation. NikoTools saves recurring scripts, generates parameter forms before execution, and displays results in the IDE's native Run console. Scripts and tool paths are shared across projects in the same IDE configuration. Working directories, file browsing, and Android device selection use the current project window.
 
 The current UI uses Chinese labels. This guide quotes those labels alongside their English meaning so you can find the relevant controls.
 
@@ -28,7 +28,7 @@ The current UI uses Chinese labels. This guide quotes those labels alongside the
 
 The minimum IntelliJ Platform build is **242 (IntelliJ IDEA 2024.2 series)**. The plugin requires a Java 21 runtime; a compatible IDE's bundled runtime is sufficient for use. You do not need to configure a development JDK just to run the plugin. The build baseline is IDEA 2024.2.6, targeting Android Studio, IntelliJ IDEA, PyCharm, and other IntelliJ Platform IDEs. Product version numbers differ, so check platform build numbers and actual compatibility.
 
-1. Obtain the built `NikoTools-0.1.3.zip`. For local builds, see the [project README](../../README.md).
+1. Obtain the built `NikoTools-0.1.4.zip`. For local builds, see the [project README](../../README.md).
 2. Open **Settings / Preferences → Plugins → gear icon → Install Plugin from Disk** and select the ZIP.
 3. Restart if prompted. Open a project and use **Tools → NikoTools** or its sidebar icon.
 4. Once the plugin is published on Marketplace, it can also be installed through its listing. The publishing configuration in this project does not confirm that a listing is already available.
@@ -77,7 +77,7 @@ The input is passed as a separate process argument without embedding it in Pytho
 
 ## Managing scripts and templates
 
-The toolbar has five actions. Hover over an icon to see its label.
+The toolbar has seven actions. Hover over an icon to see its label.
 
 | UI label | Action |
 | --- | --- |
@@ -86,12 +86,16 @@ The toolbar has five actions. Hover over an icon to see its label.
 | 导入 — Import | Read script JSON from the clipboard |
 | 排序 — Sort | Sort by usage frequency, addition order, or name |
 | 环境路径 — Environment paths | Configure global interpreters and tools |
+| 帮助 — Help | Open the script templates and parameter syntax dialog directly |
+| 复制 SKILL — Copy SKILL | Copy the complete skill for converting user inputs to plugin parameter templates |
 
 For scripts with parameters, 执行后保留弹窗 (Keep dialog open after running) is unchecked by default, so clicking 执行 (Run) closes the parameter dialog. Check it to retain inputs and run again. Scripts without parameters run directly without opening a dialog. Click 关闭 (Close) to dismiss it. The dialog allows other IDE operations; reopening the same script in the same project focuses its existing dialog, and an active run still prevents duplicate launches.
 
 The table shows name, type, and description. Double-click a script to run it. Its context menu provides **执行脚本 (Run)**, **编辑脚本 (Edit)**, **分享脚本 (Share)**, and **删除脚本 (Delete)**. Use **Shift+F10** or the context-menu key for the selected row. Press **Delete** on a selected script to request deletion (Backspace also works on macOS). Deletion asks for confirmation. Sorting is persisted across projects: usage frequency is highest first, addition order is oldest first, and names sort ascending ignoring case. Usage counts actual process launches, including reruns; cancellation and launch failures do not count. Ties retain addition order. Clicking empty table space does not operate on a script.
 
-In the editor, **脚本模板与参数语法 (Script templates and parameter syntax)** opens a split view: select a template in the left list to switch the explanation and syntax on the right, with embedded parameter inputs and live substitution results below the source code. Results update immediately when text, choices, or paths change. Copy the source or preview result separately. A preview does not execute a command. Paste copied code into the body, choose the appropriate type and configuration, and save. There is no separate template library or “Save as template” action.
+The toolbar **帮助 (Help)** action or the editor’s **脚本模板与参数语法 (Script templates and parameter syntax)** link opens a split view: select a template in the left list to switch the explanation and syntax on the right, with embedded parameter inputs and live substitution results below the source code. Results update immediately when text, choices, or paths change. Copy the source or preview result separately. A preview does not execute a command. Paste copied code into the body, choose the appropriate type and configuration, and save. There is no separate template library or “Save as template” action. The full built-in example, 全部参数类型演示 Bash (All parameter types: Bash), demonstrates ten types, defaults, and repeated references. Its paths `1` and `2` and token `1009` are demonstration values; its final output includes the actual token.
+
+Use **复制 SKILL (Copy SKILL)** to copy the complete [script parameter conversion skill](../../src/main/resources/skills/nikotools-script-parameters/SKILL.md). Give it to an AI together with your requirements or existing script to convert pre-run user inputs into plugin controls and `var` declarations while preserving the script language and business logic. The button does not install the skill.
 
 With the optional IDE Terminal plugin enabled, select text in a supported local terminal and use **新建 NikoTools 自定义脚本 (New NikoTools custom script)** from its context menu. The selection opens in the script editor and is not executed before saving. New scripts default to `powershell`; choose the appropriate type for Bash, Python, or other content. The Terminal plugin is not required for the script list or execution.
 
@@ -121,11 +125,21 @@ The plugin discovers placeholders in the **body, argument array, environment val
 | `${name:default}` | Text input with a default |
 | `${name=default}` | Legacy default syntax |
 | `${mode:On=1\|Off=0}` | Choice showing labels but substituting `1` or `0`; the first option is the default |
+| `${name@text:example}` | Explicit text input; option-like content remains literal |
+| `${description@multiline}` | Multiline input; preserves line breaks |
+| `${retries@integer:3}` | Integer input; validated before execution |
+| `${ratio@number:0.5}` | Integer or decimal input; validated before execution |
+| `${cache@boolean:true}` | Checkbox; true/1 selects, false/0 or no default clears; outputs `True`/`False` |
+| `${mode@choice:On=1\|Off=0}` | Explicit dropdown; defaults to the first option and outputs its value |
+| `${environment@radio:Dev=dev\|Prod=prod}` | Radio buttons; defaults to the first option and outputs its value |
+| `${token@secret}` | Masked input; supports saved defaults and a visibility toggle; help previews show asterisks |
 | `${input@file}` | File browser input |
 | `${output@dir}` | Directory browser input; its metadata kind is `directory` |
 | `${input@file:./data.txt}` | File input with an inline default path |
 
 Names accept letters, numbers, underscores, and Chinese characters, but not spaces. Repeated references share the same input. Conflicting repeated defaults, types, or choices cause errors. The `\|` in this Markdown table represents a literal `|` in actual scripts.
+
+The unified format is `${name@type:default-or-options}`. Omitting the type retains legacy parsing. `@choice` and `@radio` require options, including a single option; labels must be nonempty and unique, and values must be nonempty. Explicit input types such as `@text` treat `A=1|B=2` literally. Bare references `${name}` reuse the defined type; conflicting explicit types are rejected. Sharing removes input defaults while preserving types and options. Secret inputs support saved defaults and an eye icon to show or hide the value. Parameter labels omit required asterisks while required validation remains active; radio buttons are arranged horizontally.
 
 ### var declarations
 
@@ -141,13 +155,13 @@ Use `${file}`, `${mode}`, and `${output}` elsewhere in the body or configuration
 
 ### Browsing and substitution
 
-File and directory browse buttons prefer an existing input path (relative paths resolve from the current project root). Empty, invalid, or nonexistent input falls back to the **project root in the current IDE window**, and you can navigate outside the project. Without a project root, the IDE's default browsing behavior applies. Use `@file` for files and `@dir` for directories. Entering folders while browsing for a file is normal navigation. Manually entered paths are currently checked for required input only, not for existence or file/directory type.
+File and directory browse buttons open the input directory or a file's parent directory (relative paths resolve from the current project root). Missing paths are searched upward for the nearest accessible directory: for `A/B/C.txt`, a missing C opens B, and a missing B opens A. Empty or malformed input, or a path with no usable ancestor, falls back to the **project root in the current IDE window**, and you can navigate outside the project. Without a project root, the IDE's default browsing behavior applies. Use `@file` for files and `@dir` for directories. Entering folders while browsing for a file is normal navigation. Manually entered paths are currently checked for required input only, not for existence or file/directory type.
 
 Substitution is literal: quotes, backslashes, newlines, and shell metacharacters are not escaped automatically. Handle the target language's syntax when embedding input in source. Prefer Arguments JSON for paths or arbitrary text; each array item is a separate argument.
 
 ### Defaults and conditional arguments
 
-Some inputs offer **设为默认值 (Set as default)** to persist their value. Boolean, choice, and device controls do not have this button. Saving changed templates synchronizes defaults, file/directory kinds, and choice options from the template. When templates are unchanged, saved custom defaults are preserved.
+Some inputs offer **设为默认值 (Set as default)** to persist their value. Boolean, choice, radio, and device controls do not have this button; secret controls support saved defaults. Saving changed templates synchronizes defaults, file/directory kinds, and choice options from the template. When templates are unchanged, saved custom defaults are preserved.
 
 An argument such as `"?verbose:--verbose"` adds `--verbose` only when `verbose` is truthy. Booleans use case-insensitive `true` or `1`, numbers use nonzero values, and other kinds use nonempty values. The controlling parameter must also be declared through a template. See the conditional argument example below.
 
@@ -185,7 +199,7 @@ Bash arguments are available as `$1`, `$2`, etc., with `$0` fixed to `poptool-sc
 
 ## Parameter metadata
 
-Metadata configures advanced form behavior. It is generated from templates and **is not required for ordinary scripts**. Edit the JSON array when you need numeric validation, multiline or password inputs, booleans, optional fields, or custom labels.
+Metadata configures advanced form behavior. It is generated from templates and **is not required for ordinary scripts**. Use explicit template types for the ten ordinary controls. Edit the JSON array for optional fields, custom labels, or Android device inputs.
 
 | `kind` | Control and behavior |
 | --- | --- |
@@ -195,12 +209,13 @@ Metadata configures advanced form behavior. It is generated from templates and *
 | `number` | Decimal number, validated on submission |
 | `boolean` | Checkbox, substituting `True` / `False` |
 | `choice` | Choice using its `value`; define options in the template |
+| `radio` | Horizontal radio buttons using each option’s `value` |
 | `file` | File browser input |
 | `directory` | Directory browser input |
 | `secret` | Masked password input; substitution uses the actual text |
 | `android_device` | Read-only serial of the IDE-selected device |
 
-`id` matches the internal template name. `label` sets the display name, `required` controls nonblank validation, `default` supplies the initial value, and `options` provides choice labels and values. The compatibility field `placeholder` can be stored in JSON, but the current form does not display it as a hint.
+`id` matches the internal template name. `label` sets the display name, `required` controls nonblank validation, `default` supplies the initial value, and `options` provides dropdown or radio labels and values. The compatibility field `placeholder` can be stored in JSON, but the current form does not display it as a hint.
 
 For a `${count:3}` placeholder:
 
@@ -217,7 +232,7 @@ For a `${count:3}` placeholder:
 ]
 ```
 
-Save the script with its placeholders first, then edit the generated metadata to keep IDs consistent. Saving in the editor retains only parameters referenced by templates. File/directory/choice kinds and choice options follow the template definitions. Advanced kinds such as `integer`, `boolean`, and `secret` work with ordinary text placeholders.
+Save the script with its placeholders first, then edit the generated metadata to keep IDs consistent. Saving in the editor retains only parameters referenced by templates. Explicit kinds, defaults, and options follow template definitions. Existing scripts with ordinary text placeholders and metadata kinds such as `integer`, `boolean`, or `secret` remain compatible; prefer explicit `@type` declarations in new scripts.
 
 `secret` masks input; it does not encrypt stored values. Using Set as default persists the actual content. Printing the value or embedding it in source can also expose it.
 
@@ -240,14 +255,14 @@ The legacy JSON field `android_device_mode` remains compatible with storage/impo
 
 ## Output and stopping scripts
 
-- The current project's **Run** tab displays stdout, stderr, an exit code, and the output directory.
+- The current project's **Run** tab displays stdout, stderr, an exit code, and the output directory. It does not automatically print the startup command line containing the script body.
 - A script reuses its tab by ID, including after a rename. A new run clears the previous output.
 - Clicking a script again while it is starting or running focuses its existing console without launching a duplicate. Different scripts can run concurrently.
-- **再次运行 (Run again)** reads the latest saved definition and initializes the form with the previous inputs.
+- **再次运行 (Run again)** uses the IDE’s standard green triangle icon and reads the latest saved definition and initializes the form with the previous inputs.
 - **停止 (Stop)** and timeouts terminate the run and traceable child processes, without stopping shared adb services. Detached programs are not guaranteed to remain traceable.
 - Process stdin is closed. Interactive menus and runtime password prompts are unsupported; use pre-run parameters or noninteractive tool options.
 
-Each run exposes `POPTOOLS_OUTPUT_DIR` for generated files. Temporary Python/batch source files are deleted after exit; nonempty output directories are retained. These directories are in system temporary storage and may still be cleaned by the OS. Copy results to your project or another chosen location for long-term storage.
+Each execution creates a temporary output directory, exposes it as `POPTOOLS_OUTPUT_DIR`, and prints its path in the console. Ordinary `echo` and `print` output stays in the console and does not create files automatically; scripts may explicitly save reports or other generated files there. Temporary Python/batch source files and empty output directories are deleted after exit; nonempty output directories are retained. These directories are in system temporary storage and may still be cleaned by the OS. Copy results to your project or another chosen location for long-term storage.
 
 ## Sharing, importing, and migration
 
@@ -260,7 +275,7 @@ Use **分享脚本 (Share script)** to copy JSON. The recipient copies the compl
 - An array of tool objects;
 - An object containing a `scripts` array.
 
-Sharing removes the interpreter override, parameter defaults, and inline template defaults, while preserving choice definitions. Literal content in commands/environment values and paths outside defaults remain present; inspect the actual content before sharing. External script files are not copied by clipboard sharing.
+Sharing removes the interpreter override, parameter defaults, and inline template defaults, while preserving explicit types and dropdown/radio options. Literal content in commands/environment values and paths outside defaults remain present; inspect the actual content before sharing. External script files are not copied by clipboard sharing.
 
 When an ID or title conflicts, choose **覆盖 (Overwrite)** to retain the existing ID, **另存 (Save separately)** for a new ID and unique title, or **跳过 (Skip)**. Imports report success, skips, and failures per item; one failure does not roll back successful items. Unsupported fields, kinds, and versions are rejected. `internal` and `url` executors are unsupported. PopTool-managed environments and internal resource paths need adjustment for the IDE.
 

@@ -40,11 +40,14 @@ class ParameterDialog @JvmOverloads constructor(
         form = panel {
         for (p in parameters) {
             val initial = previous.getOrDefault(p.id, p.defaultValue?.toString() ?: "")
-            row((p.label ?: p.id) + if (p.required) " *" else "") {
+            row(p.label ?: p.id) {
                 when (p.kind) {
                     "choice" -> comboBox(p.options).align(AlignX.FILL).resizableColumn().apply {
                         component.selectedItem = p.options.find { it.value == initial } ?: p.options.firstOrNull()
                         readers[p.id] = { (component.selectedItem as ScriptDefinition.Option).value }
+                    }
+                    "radio" -> cell(ParameterRadioGroup(p.options, initial)).align(AlignX.FILL).resizableColumn().apply {
+                        readers[p.id] = { component.value() }
                     }
                     "boolean" -> checkBox("").apply {
                         component.isSelected = initial.equals("true", ignoreCase = true) || initial == "1"
@@ -58,8 +61,11 @@ class ParameterDialog @JvmOverloads constructor(
                     "multiline" -> scrollCell(JBTextArea(initial, 5, 45)).align(Align.FILL).resizableColumn().apply {
                         readers[p.id] = { component.text }
                     }
-                    "secret" -> passwordField().align(AlignX.FILL).resizableColumn().apply {
-                        component.text = initial; readers[p.id] = { String(component.password) }
+                    "secret" -> {
+                        val field = passwordField().align(AlignX.FILL).resizableColumn().apply {
+                            component.text = initial; readers[p.id] = { String(component.password) }
+                        }
+                        passwordVisibilityButton(field.component)
                     }
                     "android_device" -> textField().align(AlignX.FILL).resizableColumn().apply {
                         component.text = if (p.required) AndroidDevices.selectedSerial(project) else AndroidDevices.selectedSerialOrNull(project) ?: ""
@@ -74,7 +80,7 @@ class ParameterDialog @JvmOverloads constructor(
                         }
                     }
                 }
-                if (allowSaveDefaults && p.kind !in setOf("boolean", "choice", "android_device")) {
+                if (allowSaveDefaults && p.kind !in setOf("boolean", "choice", "radio", "android_device")) {
                     button("设为默认值") {
                         try { ScriptLibrary.getInstance().setParameterDefault(scriptId, p.id, readers.getValue(p.id)()); setErrorText(null) }
                         catch (error: Exception) { setErrorText(error.message) }

@@ -2,6 +2,18 @@
 
 ## Unreleased
 
+## 0.1.4
+
+### Changed
+
+- Add toolbar Help and Copy SKILL actions for script parameter authoring; remove three older full-script examples from template help.
+- Hide the process startup command line in Run consoles while retaining script output and errors.
+- Use the IDE's standard green Run icon for the Run tab's rerun action.
+- Remove required asterisks from parameter labels, arrange radio options horizontally, and allow saving secret defaults with a password visibility icon.
+- Support ten explicit parameter types with legacy syntax compatibility; preserve typed inputs and choice definitions when sharing scripts.
+- Include an all-parameter Bash demonstration with defaults and repeated var references, plus a copyable skill for AI script authoring.
+- Walk up missing file and directory parameter paths to open the nearest accessible parent directory.
+
 ## 0.1.3
 
 ### Changed

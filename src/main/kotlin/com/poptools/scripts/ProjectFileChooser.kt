@@ -18,7 +18,7 @@ internal fun projectRoot(project: Project?): VirtualFile? = project?.basePath?.l
     LocalFileSystem.getInstance().findFileByPath(it)?.takeIf { file -> file.isDirectory }
 }
 
-/** Open the input directory (or a file's parent), falling back to the owning project root. */
+/** Open the nearest usable input directory, falling back to the owning project root. */
 internal class ProjectRootBrowseListener(
     descriptor: FileChooserDescriptor,
     private val owningProject: Project?,
@@ -46,16 +46,18 @@ internal class ProjectRootBrowseListener(
                     val base = project?.basePath ?: return@let null
                     path = Path.of(base).resolve(path)
                 }
-                path = path.normalize()
                 // Generated files can exist on disk before the IDE has indexed them in the VFS.
-                // Resolve the directory directly instead of requiring a VirtualFile for the leaf.
-                val directory = when {
-                    Files.isDirectory(path) -> path
-                    Files.exists(path) -> path.parent
-                    else -> null
-                } ?: return@let null
-                LocalFileSystem.getInstance().refreshAndFindFileByNioFile(directory)
-                    ?.takeIf { it.isValid && it.isDirectory }
+                // Walk parents when a file or directory no longer exists or cannot be opened.
+                var directory: Path? = path.normalize()
+                while (directory != null) {
+                    if (Files.isDirectory(directory) && Files.isReadable(directory)) {
+                        val file = LocalFileSystem.getInstance().refreshAndFindFileByNioFile(directory)
+                            ?.takeIf { it.isValid && it.isDirectory }
+                        if (file != null) return@let file
+                    }
+                    directory = directory.parent
+                }
+                null
             } catch (_: java.nio.file.InvalidPathException) { null }
         }
         return current ?: projectRoot(project)

@@ -10,7 +10,7 @@ import java.util.regex.Pattern
 object ParameterTemplates {
     private val placeholder = Pattern.compile("\\$\\{([^{}]+)}")
     private val declaration = Pattern.compile("^[ \\t]*(?:var|Var|pVal)[ \\t]+([^\\s:=]+)[ \\t]*(?::|=)[ \\t]*\\$\\{([^{}\\r\\n]+)}[ \\t]*(?:\\r?\\n|$)", Pattern.MULTILINE)
-    private data class Parsed(val id: String, val defaultValue: String?, val kind: String, val options: List<Option>)
+    private data class Parsed(val id: String, val defaultValue: String?, val kind: String, val options: List<Option>, val explicitKind: Boolean = false)
     private data class Definition(val label: String, val parsed: Parsed, val declared: Boolean)
 
     private fun validateId(id: String) {
@@ -19,9 +19,12 @@ object ParameterTemplates {
         }
     }
 
-    private fun choices(value: String): List<Option> {
+    private fun choices(value: String, explicit: Boolean = false): List<Option> {
         val parts = value.split('|')
-        if (parts.size < 2 || parts.any { '=' !in it }) return emptyList()
+        if ((!explicit && parts.size < 2) || parts.any { '=' !in it }) {
+            require(!explicit) { "选择参数需要使用 显示名称=实际值，并用 | 分隔选项" }
+            return emptyList()
+        }
         val labels = hashSetOf<String>()
         return parts.map { part ->
             val i = part.indexOf('=')
@@ -53,15 +56,22 @@ object ParameterTemplates {
             when (names[1].trim()) {
                 "file" -> "file"
                 "dir" -> "directory"
+                "text", "multiline", "integer", "number", "boolean", "choice", "radio", "secret" -> names[1].trim()
                 else -> throw IllegalArgumentException("不支持的参数类型：$name")
             }
         }
-        val options = if (modern) choices(requireNotNull(value)) else emptyList()
+        if (kind in setOf("choice", "radio")) {
+            require(value != null && value.isNotBlank()) { "选择参数没有选项：${names[0]}" }
+            val options = choices(value, explicit = true)
+            return Parsed(names[0], options.first().value, kind, options, true)
+        }
+        // Only the legacy untyped syntax infers choices from the payload. Explicit text is literal.
+        val options = if (modern && (names.size == 1 || kind in setOf("file", "directory"))) choices(requireNotNull(value)) else emptyList()
         if (options.isNotEmpty()) {
             require(kind == "text") { "文件或目录参数不能使用下拉选项" }
             return Parsed(names[0], options.first().value, "choice", options)
         }
-        return Parsed(names[0], value, kind, emptyList())
+        return Parsed(names[0], value, kind, emptyList(), names.size == 2)
     }
 
     @JvmStatic fun synchronize(templates: List<String>, existing: List<Parameter>): MutableList<Parameter> {
@@ -71,7 +81,7 @@ object ParameterTemplates {
             while (m.find()) {
                 val id = parse(m.group(1))
                 val p = parse(m.group(2))
-                val d = Definition(p.id, Parsed(id.id, p.defaultValue, p.kind, p.options), true)
+                val d = Definition(p.id, p.copy(id = id.id), true)
                 val old = definitions.putIfAbsent(id.id, d)
                 require(old == null || old == d) { "参数设置了不同声明：${id.id}" }
             }
@@ -86,13 +96,27 @@ object ParameterTemplates {
                     continue
                 }
                 val previous = old.parsed
+                if (previous.defaultValue == null && previous.kind == "text" && !previous.explicitKind && !old.declared) {
+                    definitions[p.id] = Definition(old.label, p, false)
+                    continue
+                }
                 if (p.defaultValue != null) {
-                    if (previous.defaultValue == null) definitions[p.id] = Definition(old.label, p, old.declared)
+                    if (previous.defaultValue == null) {
+                        require((!previous.explicitKind && previous.kind == "text") || previous.kind == p.kind) {
+                            "参数的类型或选项冲突：${p.id}"
+                        }
+                        definitions[p.id] = Definition(old.label, p, old.declared)
+                    }
                     else require(previous.defaultValue == p.defaultValue && previous.kind == p.kind && previous.options == p.options) {
                         "参数的默认值、类型或选项冲突：${p.id}"
                     }
-                } else if (!(old.declared && p.kind == "text")) {
+                } else if (!(p.kind == "text" && !p.explicitKind)) {
                     require(previous.kind == p.kind && previous.options == p.options) { "参数的类型或选项冲突：${p.id}" }
+                }
+                // An explicit type remains authoritative even if an equivalent legacy definition came first.
+                if (p.explicitKind && !definitions.getValue(p.id).parsed.explicitKind) {
+                    val current = definitions.getValue(p.id)
+                    definitions[p.id] = current.copy(parsed = current.parsed.copy(explicitKind = true))
                 }
             }
         }
@@ -103,7 +127,7 @@ object ParameterTemplates {
             if (source == null || d.declared) p.label = d.label
             p.defaultValue = d.parsed.defaultValue ?: ""
             p.options = d.parsed.options.toMutableList()
-            if (d.parsed.kind != "text" || p.kind in listOf("choice", "file", "directory")) p.kind = d.parsed.kind
+            if (d.parsed.explicitKind || d.parsed.kind != "text" || p.kind in listOf("choice", "radio", "file", "directory")) p.kind = d.parsed.kind
             p
         }.toMutableList()
     }
@@ -131,7 +155,8 @@ object ParameterTemplates {
         val result = StringBuilder()
         while (m.find()) {
             val p = parse(m.group(1))
-            val name = p.id + when (p.kind) { "file" -> "@file"; "directory" -> "@dir"; else -> "" }
+            val type = if (p.kind == "directory") "dir" else p.kind
+            val name = p.id + if (p.explicitKind) "@$type" else ""
             val replacement = if (p.options.isEmpty() && p.defaultValue != null) "\${$name}" else m.group()
             m.appendReplacement(result, Matcher.quoteReplacement(replacement))
         }

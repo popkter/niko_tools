@@ -13,7 +13,7 @@ object ScriptJson {
             else json.asJsonObject.let { ScriptDefinition.Option(it["label"].asString, it["value"].asString) }
         } as JsonDeserializer<ScriptDefinition.Option>).create()
     private val kinds = setOf("powershell", "python", "bash", "batch", "process")
-    private val parameterKinds = setOf("text", "multiline", "integer", "number", "boolean", "choice", "file", "directory", "android_device", "secret")
+    private val parameterKinds = setOf("text", "multiline", "integer", "number", "boolean", "choice", "radio", "file", "directory", "android_device", "secret")
 
     @JvmStatic fun copy(s: ScriptDefinition): ScriptDefinition = GSON.fromJson(GSON.toJson(s), ScriptDefinition::class.java)
     @JvmStatic fun copyParameter(p: ScriptDefinition.Parameter): ScriptDefinition.Parameter = GSON.fromJson(GSON.toJson(p), ScriptDefinition.Parameter::class.java)
@@ -33,7 +33,7 @@ object ScriptJson {
         for (p in s.parameters) {
             require(p.id != null && ids.add(p.id) && p.kind in parameterKinds && p.options != null) { "不支持或重复的参数：${p.id}" }
             require(p.id.isNotBlank() && p.id.codePoints().allMatch { it == '_'.code || Character.isLetterOrDigit(it) }) { "无效参数名称：${p.id}" }
-            require(p.kind != "choice" || p.options.isNotEmpty()) { "选择参数没有选项：${p.id}" }
+            require(p.kind !in setOf("choice", "radio") || p.options.isNotEmpty()) { "选择参数没有选项：${p.id}" }
         }
         ParameterTemplates.synchronize(ParameterTemplates.templates(s), s.parameters)
     }

@@ -87,12 +87,12 @@
       {
         "title": "带默认值",
         "code": "${标题:默认值}",
-        "body": "例如 ${数量:3}。默认值用冒号分隔，数值类型需要脚本自行转换。"
+        "body": "例如 ${数量:3}。默认值用冒号分隔；可用 @integer 校验整数、@number 校验数字。"
       },
       {
         "title": "固定选项",
-        "code": "${触摸点显示:开启=1|关闭=0}",
-        "body": "左侧是显示文字，右侧是实际值；用竖线分隔选项，第一项为默认选项。"
+        "code": "${触摸点显示@choice:开启=1|关闭=0}",
+        "body": "左侧是显示文字，右侧是实际值；用竖线分隔选项，第一项为默认选项。兼容旧写法 ${触摸点显示:开启=1|关闭=0}。"
       },
       {
         "title": "选择已有文件",
@@ -110,8 +110,43 @@
         "body": "var 放在脚本开头，正文通过内部名称引用；声明行会在执行前移除，不是脚本语言本身的语法。"
       },
       {
+        "title": "显式文本类型",
+        "code": "${标题@text:开启=1|关闭=0}",
+        "body": "显式 @text 始终按普通文本处理，不会根据内容推断为下拉框。省略类型仍兼容原有写法。"
+      },
+      {
+        "title": "多行文本",
+        "code": "${说明@multiline}",
+        "body": "输入多行内容，替换时保留换行。"
+      },
+      {
+        "title": "整数输入",
+        "code": "${重试次数@integer:3}",
+        "body": "只允许整数；执行前校验输入。"
+      },
+      {
+        "title": "数字输入",
+        "code": "${比例@number:0.5}",
+        "body": "允许整数或小数；执行前校验输入。"
+      },
+      {
+        "title": "复选框",
+        "code": "${启用缓存@boolean:true}",
+        "body": "true 或 1 默认勾选，false 或 0 默认不勾选；未设置默认值时不勾选。替换为 True 或 False。"
+      },
+      {
+        "title": "单选按钮组",
+        "code": "${环境@radio:开发=dev|生产=prod}",
+        "body": "横向显示全部选项，只能选择一项；第一项默认选中，替换为实际值。"
+      },
+      {
+        "title": "密码输入",
+        "code": "${访问令牌@secret}",
+        "body": "默认隐藏输入内容，可通过眼睛图标显示或隐藏密码，支持设为默认值；帮助预览中的内容以星号显示。"
+      },
+      {
         "title": "使用提示",
-        "body": "引号需要自己写。 工具箱不会自动添加引号或转义特殊字符；含空格的路径应按脚本语言加引号。参数名使用中文、字母、数字或下划线；占位符定义不能包含花括号或换行。不可信输入不能仅靠引号保证安全。",
+        "body": "引号需要自己写。 工具箱不会自动添加引号或转义特殊字符；含空格的路径应按脚本语言加引号。参数名使用中文、字母、数字或下划线；占位符定义不能包含花括号；var 声明需单独占一行，定义不能跨行。不可信输入不能仅靠引号保证安全。",
         "icon": "info"
       }
     ]
@@ -122,23 +157,13 @@
     "icon": "code",
     "cards": [
       {
-        "title": "显示 Android 触摸点 PowerShell",
-        "body": "生成一个开关选项下拉框。需要已连接并授权的 Android 设备。",
-        "code": "adb shell settings put system show_touches ${触摸点显示:开启=1|关闭=0}\nif ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }"
-      },
-      {
-        "title": "查看日志目录 PowerShell",
-        "body": "生成文件夹选择器；用 var 让路径在检查和列出文件时复用。无需 Android 设备。",
-        "code": "var logs = ${日志目录@dir}\n\n$ErrorActionPreference = \"Stop\"\nif (-not (Test-Path -LiteralPath \"${logs}\" -PathType Container)) {\n    Write-Error \"请选择有效的日志目录\"\n    exit 1\n}\nGet-ChildItem -LiteralPath \"${logs}\" -File |\n    Select-Object Name, Length, LastWriteTime"
-      },
-      {
-        "title": "按数量输出序号 Python",
-        "body": "生成数量输入框，默认 3；演示显式转换和范围校验，仅使用 Python 标准库。",
-        "code": "import sys\n\ntry:\n    count = int(\"${数量:3}\")\nexcept ValueError:\n    sys.exit(\"数量必须是整数\")\n\nif not 1 <= count <= 100:\n    sys.exit(\"请输入 1 到 100 之间的数量\")\n\nfor number in range(1, count + 1):\n    print(f\"第 {number} 项\")"
+        "title": "全部参数类型演示 Bash",
+        "body": "选择 Bash 脚本类型，粘贴后保存。展示十种显式参数类型、var 声明、默认值与重复引用。全部参数均带默认值，选择框默认第一项，复选框输出 True/False。文件和目录的 1、2 是演示默认值；脚本最后一行会输出访问令牌的实际内容。帮助预览仍以星号显示密码。此示例用于普通受信任输入，内容按字面替换，不自动转义。",
+        "code": "# 脚本类型：Bash。var 声明由插件解析，执行前会自动移除。\n# 十种显式参数类型\nvar text=${单行文本@text:示例文本}\nvar multiline=${多行文本@multiline:多行文本}\nvar integer=${重试次数@integer:3}\nvar number=${比例@number:0.5}\nvar boolean=${启用缓存@boolean:true}\nvar choice=${下拉框@choice:选项1=1|选项2=2}\nvar file=${选择文件@file:1}\nvar dir=${选择目录@dir:2}\nvar secret=${访问令牌@secret:1009}\nvar radio=${单选框@radio:选项1=1|选项2=2}\n\n# 引用声明的内部名称；相同参数可多次引用。\necho \"单行文本：${text}\"\necho \"多行文本：${multiline}\"\necho \"整数：${integer}\"\necho \"数字：${number}\"\necho \"复选框：${boolean}\"\necho \"下拉框实际值：${choice}\"\necho \"文件路径：${file}\"\necho \"目录路径：${dir}\"\necho \"单选框实际值：${radio}\"\necho \"再次引用文件路径：${file}\"\n\n# 密码只展示是否已填写，不在输出中显示实际内容。\nif [ -n \"${secret}\" ]; then\n    echo \"访问令牌：已填写（隐藏内容）${secret}\"\nfi\n"
       },
       {
         "title": "使用提示",
-        "body": "模板按普通受信任输入编写。路径示例不要输入双引号、换行或 PowerShell 表达式；Python 数量框仅填写整数。校验发生在文本替换之后，不能代替转义。",
+        "body": "模板按普通受信任输入编写；内容按字面替换，不自动转义。参数类型校验不能代替脚本语言的引号和转义。",
         "icon": "info"
       }
     ]

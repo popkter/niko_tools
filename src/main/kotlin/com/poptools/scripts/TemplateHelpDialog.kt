@@ -59,12 +59,33 @@ class TemplateHelpDialog(private val project: Project) : DialogWrapper(project) 
         val form = panel {
             for (parameter in parameters) {
                 val initial = parameter.defaultValue?.toString() ?: ""
-                row((parameter.label ?: parameter.id) + if (parameter.required) " *" else "") {
+                row(parameter.label ?: parameter.id) {
                     when (parameter.kind) {
                         "choice" -> comboBox(parameter.options).align(AlignX.FILL).resizableColumn().apply {
                             component.selectedItem = parameter.options.find { it.value == initial } ?: parameter.options.firstOrNull()
                             readers[parameter.id] = { (component.selectedItem as? ScriptDefinition.Option)?.value ?: "" }
                             component.addActionListener { updatePreview() }
+                        }
+                        "radio" -> cell(ParameterRadioGroup(parameter.options, initial) { updatePreview() })
+                            .align(AlignX.FILL).resizableColumn().apply {
+                                readers[parameter.id] = { component.value() }
+                            }
+                        "boolean" -> checkBox("").apply {
+                            component.isSelected = initial.equals("true", ignoreCase = true) || initial == "1"
+                            readers[parameter.id] = { if (component.isSelected) "True" else "False" }
+                            component.addActionListener { updatePreview() }
+                        }
+                        "multiline" -> scrollCell(JBTextArea(initial, 5, 45)).align(Align.FILL).resizableColumn().apply {
+                            readers[parameter.id] = { component.text }
+                            watchPreview(component)
+                        }
+                        "secret" -> {
+                            val field = passwordField().align(AlignX.FILL).resizableColumn().apply {
+                                component.text = initial
+                                readers[parameter.id] = { String(component.password) }
+                                watchPreview(component)
+                            }
+                            passwordVisibilityButton(field.component)
                         }
                         "file", "directory" -> projectPathField(project, if (parameter.kind == "file")
                             FileChooserDescriptorFactory.createSingleFileDescriptor() else FileChooserDescriptorFactory.createSingleFolderDescriptor()
@@ -103,7 +124,9 @@ class TemplateHelpDialog(private val project: Project) : DialogWrapper(project) 
             val values = parameters.associate { parameter ->
                 val value = readers.getValue(parameter.id)()
                 require(!parameter.required || value.isNotBlank()) { "请填写：${parameter.label ?: parameter.id}" }
-                parameter.id to value
+                if (value.isNotBlank() && parameter.kind == "integer") java.math.BigInteger(value)
+                if (value.isNotBlank() && parameter.kind == "number") java.math.BigDecimal(value)
+                parameter.id to if (parameter.kind == "secret" && value.isNotEmpty()) "******" else value
             }
             preview.text = ParameterTemplates.render(example.code, values)
             preview.caretPosition = 0

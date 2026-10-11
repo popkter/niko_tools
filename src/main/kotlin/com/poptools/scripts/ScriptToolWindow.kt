@@ -96,6 +96,8 @@ class ScriptToolWindow : ToolWindowFactory {
                 }
             })
             globalActions.add(action("环境路径", "配置解释器和工具路径", AllIcons.General.Settings) { ShowSettingsUtil.getInstance().showSettingsDialog(project, EnvironmentSettings::class.java) })
+            globalActions.add(action("帮助", "打开脚本模板与参数语法", AllIcons.Actions.Help) { TemplateHelpDialog(project).show() })
+            globalActions.add(action("复制 SKILL", "复制将用户输入转换为插件参数模板的 SKILL", AllIcons.Actions.Copy, ::copyScriptSkill))
             toolbar = ActionManager.getInstance().createActionToolbar("NikoTools.ScriptToolbar", globalActions, true)
             toolbar.targetComponent = scriptTable
             component = panel {
@@ -171,6 +173,12 @@ class ScriptToolWindow : ToolWindowFactory {
             return if (row < 0 || row >= scripts.size) null else scripts[scriptTable.convertRowIndexToModel(row)]
         }
         private fun edit(s: ScriptDefinition, template: Boolean) = ScriptEditor(project, s, template).show()
+        private fun copyScriptSkill() {
+            val skill = requireNotNull(javaClass.getResourceAsStream("/skills/nikotools-script-parameters/SKILL.md")) {
+                "无法读取脚本参数模板 SKILL"
+            }.reader(Charsets.UTF_8).use { it.readText() }
+            CopyPasteManager.getInstance().setContents(StringSelection(skill))
+        }
         private fun refresh() {
             val sid = selected()?.id
             scriptTable.clearSelection(); scripts.clear(); scripts.addAll(ScriptLibrary.getInstance().sortedScripts()); model.fireTableDataChanged()

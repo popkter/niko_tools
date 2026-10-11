@@ -150,7 +150,7 @@ object ScriptRunner {
                 console.attachToProcess(handler)
                 console.print("运行：${script.title}\n" + (if (serial == null) "" else "默认 Android 设备：$serial（脚本显式设备参数优先）\n"), ConsoleViewContentType.SYSTEM_OUTPUT)
                 console.print("脚本输出目录：${cleanup.resolve("outputs")}\n", ConsoleViewContentType.SYSTEM_OUTPUT)
-                val again = object : DumbAwareAction("再次运行") {
+                val again = object : DumbAwareAction("再次运行", "再次运行此脚本", DefaultRunExecutor.getRunExecutorInstance().icon) {
                     override fun actionPerformed(e: AnActionEvent) {
                         val latest = ScriptLibrary.getInstance().list(false).find { it.id == script.id } ?: script
                         run(project, latest, values)
@@ -212,6 +212,11 @@ object ScriptRunner {
     class ScriptProcessHandler(line: GeneralCommandLine) : KillableColoredProcessHandler(line) {
         @Volatile var stopped = false
         init { setShouldDestroyProcessRecursively(true) }
+        override fun coloredTextAvailable(text: String, outputType: Key<*>) {
+            // BaseOSProcessHandler prints the command line at startup, including inline script contents.
+            if (outputType == ProcessOutputTypes.SYSTEM && text == "$commandLine\n") return
+            super.coloredTextAvailable(text, outputType)
+        }
         override fun destroyProcessImpl() { stopped = true; super.destroyProcessImpl() }
     }
     private fun consolePanel(console: ConsoleView, vararg actions: AnAction): JComponent {

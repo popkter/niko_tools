@@ -49,7 +49,7 @@ class ScriptEditor(private val project: Project, source: ScriptDefinition, priva
                     .validationOnApply { if (it.text.isBlank()) ValidationInfo("脚本正文不能为空", it) else null }
             }.resizableRow()
             row {
-                comment("\${参数:默认值} · \${模式:开启=1|关闭=0} · \${文件@file} · var id = \${显示名称}")
+                comment("\${参数:默认值} · \${模式@choice:开启=1|关闭=0} · \${文件@file} · var id = \${显示名称}")
                 link("脚本模板与参数语法") { TemplateHelpDialog(project).show() }
             }
             collapsibleGroup("执行配置") {

@@ -12,9 +12,9 @@
 
 NikoTools 插件源码、图标和随插件提供的模板参考资源采用 [MIT License](LICENSE)。允许使用、修改、分发和商业使用，须保留完整的版权及许可声明；软件按原样提供，不提供担保。
 
-Copyright (c) 2026 popkter。公开源码：[popkter/PopToolProject — plugins/jetbrains](https://github.com/popkter/PopToolProject/tree/develop/plugins/jetbrains)。
+Copyright (c) 2026 popkter。公开源码：[popkter/niko_tools](https://github.com/popkter/niko_tools)。
 
-许可范围为此插件目录，不改变 PopToolProject 其他目录的授权条款。IDE、Android 插件及外部运行工具保留各自的许可，详见 [依赖说明](THIRD_PARTY_NOTICES.md)。插件 JAR 的 `META-INF` 中包含许可文本。
+许可范围为此插件仓库。IDE、Android 插件及外部运行工具保留各自的许可，详见 [依赖说明](THIRD_PARTY_NOTICES.md)。插件 JAR 的 `META-INF` 中包含许可文本。
 
 支持 IntelliJ Platform **242 及以上（IDEA 2024.2+）**的 Android Studio、IntelliJ IDEA、PyCharm 等 IDE，使用 IDE 自带的 Java 运行插件，字节码要求 Java 21 或更高。构建基线为 IntelliJ IDEA Community `2024.2.6`。插件不打包脚本解释器、adb 或 scrcpy。
 
@@ -24,9 +24,9 @@ Copyright (c) 2026 popkter。公开源码：[popkter/PopToolProject — plugins/
 
 此目录是基于 [IntelliJ Platform Plugin Generator](https://plugins.jetbrains.com/generator) 生成的独立 Gradle 项目。保留 Gradle Wrapper、版本目录及 `.run` 配置，插件实现使用 Kotlin，位于 `src/main/kotlin`，不包含生成器的示例工具窗口。
 
-全部 19 个插件实现类使用 Kotlin，继续生成 Java 21 字节码。Kotlin 语言与标准库 API 设为 1.9，以兼容 242 平台自带的 Kotlin 1.9.24；插件使用 IDE 提供的标准库，不额外打包 Kotlin 运行库，也不要求用户启用 Kotlin 语言支持插件。插件 ID、扩展类名、`poptool-scripts.xml` 及 JSON 数据字段保持兼容。
+插件实现使用 Kotlin，生成 Java 21 字节码。Kotlin 语言与标准库 API 设为 1.9，以兼容 242 平台自带的 Kotlin 1.9.24；插件使用 IDE 提供的标准库，不额外打包 Kotlin 运行库，也不要求用户启用 Kotlin 语言支持插件。插件 ID、扩展类名、`poptool-scripts.xml` 及 JSON 数据字段保持兼容。
 
-界面使用官方 Kotlin UI DSL 声明式布局：设置页使用 `BoundConfigurable` 与状态绑定，编辑器、参数表单和模板预览使用 DSL 行、分组与校验；工具窗口及运行控制台组合 IDE 原生控件，不再手写 Swing 布局。UI DSL 和原生控件底层由 IntelliJ Platform 的 Swing UI 系统承载。
+界面使用官方 Kotlin UI DSL 声明式布局：设置页使用 `BoundConfigurable` 与状态绑定，编辑器、参数表单和模板预览使用 DSL 行、分组与校验；工具窗口及运行控制台组合 IDE 原生控件，横向单选按钮组和密码显示按钮使用 Swing 控件扩展。UI DSL 和原生控件底层由 IntelliJ Platform 的 Swing UI 系统承载。
 
 JUnit 测试入口及迁移测试位于 `src/test/kotlin`。原有 `CoreTests.java` 保留为迁移行为的回归对照，`IntegrationSmoke.java` 保留为 Windows 独立 IDE 验收工具；两者均不进入发布安装包。
 
@@ -53,7 +53,7 @@ Windows：
 .\gradlew.bat build -PlocalIdePath='你的 IDEA 2024.2 安装目录'
 ```
 
-构建产物为 `build/distributions/NikoTools-0.1.3.zip`，插件版本来自 `gradle.properties`。在目标 IDE 的 **Settings → Plugins → 齿轮 → Install Plugin from Disk** 选择 ZIP，按提示重启，然后打开 **Tools → NikoTools**。
+构建产物为 `build/distributions/NikoTools-0.1.4.zip`，插件版本来自 `gradle.properties`。在目标 IDE 的 **Settings → Plugins → 齿轮 → Install Plugin from Disk** 选择 ZIP，按提示重启，然后打开 **Tools → NikoTools**。
 
 构建逻辑统一由 Gradle 管理，无需 Bash 或 PowerShell 包装脚本。`build` 执行检查并生成插件 ZIP；`assemble` 只打包，`check` 只检查，`buildPlugin` 也可直接用于生成 ZIP。Gradle Wrapper 的 `gradlew` / `gradlew.bat` 是各系统的标准启动器；Windows 启动器可在 cmd 中运行，无需安装 PowerShell。
 
@@ -73,20 +73,22 @@ Windows：
 
 插件 ID `com.poptools.scripts` 和已有配置文件名称保持不变，可继续读取既有脚本库。最低平台版本为 `242`（2024.2），不设置 `until-build` 上限。2024.1 及更早版本使用 Java 17，当前 Java 21 插件不支持。未来平台版本仍可能改变 API，不设置上限不等于保证永久兼容；IDE 内交互仍需在各目标产品上验收。
 
-本次 0.1.1 已在本机 IDEA 2024.2.6（IU-242.26775.15）和 Android Studio（AI-253.32098.37.2534.15336583）运行核心测试，并用官方 Plugin Verifier 验证同一个按 242 编译的 ZIP，两者均判定 Compatible。新版终端选区适配测试在 253 上通过，在 242 上验证缺失新版 API 时的回退。验证器仍报告弃用 API（253 上包括计划移除的 API），后续平台升级需要继续回归；二进制兼容性检查不替代真实 IDE UI 和设备交互验收。
+0.1.4 已通过 242 基线的完整构建和本机 Android Studio 253 的兼容测试，两套平台各运行 38 个 JUnit 测试，并验证来自原 PopTool 解析器的 30 个兼容用例；版本发布逻辑的 3 个测试也通过。安装包按 242 基线生成。
+
+早期 0.1.1 的验证记录：在本机 IDEA 2024.2.6（IU-242.26775.15）和 Android Studio（AI-253.32098.37.2534.15336583）运行核心测试，并用官方 Plugin Verifier 验证同一个按 242 编译的 ZIP，两者均判定 Compatible。新版终端选区适配测试在 253 上通过，在 242 上验证缺失新版 API 时的回退。验证器仍报告弃用 API（253 上包括计划移除的 API），后续平台升级需要继续回归；二进制兼容性检查不替代真实 IDE UI 和设备交互验收。
 
 ## GitHub 构建与发布
 
-将本目录提交到独立 GitHub 仓库后，`.github/workflows/build.yml` 在 push、PR 和手动运行时执行 `build`，上传插件 ZIP 与 SHA-256 文件。workflow 的手动 `verify_plugin` 选项用于执行兼容性验证。此外，独立任务在 Android Studio 平台 253 上执行核心与新版终端适配测试，发布 ZIP 仍由 242 基线任务生成。此项目不再使用 PopToolProject 的桌面应用 Release workflow。
+独立仓库 [popkter/niko_tools](https://github.com/popkter/niko_tools) 的 `.github/workflows/build.yml` 在 push、PR 和手动运行时执行 `build`，上传插件 ZIP 与 SHA-256 文件。workflow 的手动 `verify_plugin` 选项用于执行兼容性验证。此外，独立任务在 Android Studio 平台 253 上执行核心与新版终端适配测试，发布 ZIP 仍由 242 基线任务生成。此项目不再使用 PopToolProject 的桌面应用 Release workflow。
 
 ## Marketplace 发布
 
-首次发布通过 [JetBrains Marketplace](https://plugins.jetbrains.com/) 手动上传 `build/distributions/NikoTools-0.1.1.zip`，创建 Vendor 并补齐联系邮箱、网站、MIT 许可证和公开源码链接。迁移到独立仓库后，需要更新 `plugin.xml` 中的源码及许可证链接。
+首次发布通过 [JetBrains Marketplace](https://plugins.jetbrains.com/) 手动上传当前构建的 `build/distributions/NikoTools-0.1.4.zip`，创建 Vendor 并补齐联系邮箱、网站、MIT 许可证和公开源码链接。`plugin.xml` 中的源码及许可证链接指向当前独立仓库。
 
 后续更新采用 GitHub 自动发布：
 
 1. 在仓库 **Settings → Secrets and variables → Actions** 添加 Repository secret `PUBLISH_TOKEN`，内容为 Marketplace 的发布令牌。
-2. 将 `gradle.properties` 中的 `version` 递增为 `X.Y.Z`（例如 `0.1.2` → `0.1.3`），更新版本说明，并提交到 `main`。可直接在 GitHub 编辑该文件，也可通过 PR 合并。
+2. 将 `gradle.properties` 中的 `version` 递增为 `X.Y.Z`（例如 `0.1.3` → `0.1.4`），更新版本说明，并提交到 `main`。可直接在 GitHub 编辑该文件，也可通过 PR 合并。
 3. workflow 比较推送前后的版本号；版本递增时，等待 `build` 和 `newer-platform-tests` 全部成功，再执行 `./gradlew --no-daemon publishPlugin` 上传稳定版。普通提交、PR 和其他分支不会上传；降低版本号会使检查失败。
 
 令牌只注入发布步骤，不写入仓库。上传后仍需等待 Marketplace 验证或审核。版本号来自 `gradle.properties`，Gradle 会自动覆盖打包后的 `plugin.xml` 版本，无需每次手动修改 XML。
@@ -98,23 +100,34 @@ Windows：
 ## 使用
 
 - **终端选区**：在本地终端选中文本，右键选择“新建 NikoTools 自定义脚本”。选区进入脚本正文，保存前不执行。支持经典终端和 Reworked 终端。
-- **全局操作**：顶部原生图标工具栏提供新建脚本、批量操作、导入、排序和环境路径五项，悬停显示操作说明。
+- **全局操作**：顶部原生图标工具栏提供新建脚本、批量操作、导入、排序、环境路径、帮助和复制 SKILL 七项，悬停显示操作说明。
 - **脚本管理**：列表按名称、类型、说明展示，使用 IDE 原生表格及主题选中效果。右键脚本行可执行、编辑、分享或删除该脚本；菜单采用原生图标和分隔线。双击脚本直接进入执行流程，有参数时仍先填写参数。右键或双击列表空白处不会操作脚本；选中后可用 Shift+F10 打开菜单，按 Delete 弹出删除确认（macOS 也支持 Backspace）。顶部“排序”可按使用频率（高到低）、添加顺序（先添加在前）或名称（忽略大小写升序）排列，排序方式跨项目持久化。使用频率按实际启动次数累计，再次运行也计入，取消或启动失败不计入；同频率或同名时保留添加顺序。
-- **脚本模板**：在新建或编辑弹窗中打开“脚本模板与参数语法”，复用原项目帮助页的示例代码，左侧列表选择模板，右侧自动切换说明与写法，代码下方直接填写参数并实时预览替换结果，可分别复制原始代码与预览结果；不新增独立模板库或“保存为模板”功能。
-- **参数**：参数弹窗提供“执行后保留弹窗”复选框，默认不勾选，点击“执行”后关闭；勾选后保留弹窗，可修改参数并再次执行。点击“关闭”或窗口关闭按钮结束填写。无参数脚本直接执行，不弹出参数窗口。弹窗不阻塞 IDE 操作，同一项目中重复打开同一脚本会聚焦已有弹窗，脚本运行期间仍阻止重复启动。保存时根据正文、参数数组、环境变量和工作目录生成输入表单。支持 `${名称}`、`${名称:默认值}`、`${名称=旧格式默认值}`、`${模式:开启=1|关闭=0}`、`${路径@file}`、`${路径@dir}`，以及 `var` 声明（兼容旧写法 `Var` 和 `pVal`）。声明行在执行前移除，替换保留 PopTool 的字面语义。
-- **执行配置**：可设置工作目录、解释器、依赖工具、输出编码、超时、参数数组及环境变量。高级参数元数据保留 PopTool 的必填、文本、多行、数字、布尔、下拉、文件、目录、密码和 Android 设备类型。
-- **输出**：当前项目中每个脚本复用一个 IDE Run 标签，显示打印、错误和退出码，可停止或再次运行。完成后重新执行会清空旧输出；脚本改名后仍按脚本 ID 复用标签。启动中或运行中重复点击会切回已有控制台，不额外启动进程。不同脚本可并发运行且各自保留标签，关闭标签后下次执行会重新创建。参数在运行前填写；运行中的标准输入关闭，不支持交互菜单。
+- **脚本模板**：点击顶部“帮助”或在新建、编辑弹窗中打开“脚本模板与参数语法”，查看十种参数类型及内置“全部参数类型演示 Bash”，左侧列表选择模板，右侧自动切换说明与写法，代码下方直接填写参数并实时预览替换结果，可分别复制原始代码与预览结果；“复制 SKILL”将完整的脚本参数转换技能复制到剪贴板，可交给 AI 编写插件脚本。
+- **参数**：参数弹窗提供“执行后保留弹窗”复选框，默认不勾选，点击“执行”后关闭；勾选后保留弹窗，可修改参数并再次执行。点击“关闭”或窗口关闭按钮结束填写。无参数脚本直接执行，不弹出参数窗口。弹窗不阻塞 IDE 操作，同一项目中重复打开同一脚本会聚焦已有弹窗，脚本运行期间仍阻止重复启动。保存时根据正文、参数数组、环境变量和工作目录生成输入表单。支持 `${名称}`、`${名称:默认值}`、`${名称=旧格式默认值}`、`${模式:开启=1|关闭=0}`，以及显式类型 `@text`、`@multiline`、`@integer`、`@number`、`@boolean`、`@choice`、`@radio`、`@file`、`@dir`、`@secret`（如 `${模式@choice:开启=1|关闭=0}`、`${环境@radio:开发=dev|生产=prod}`）。单选按钮组横向排列，参数标题不显示必填星号，但仍执行必填校验；密码输入支持设为默认值及显示/隐藏密码。支持 `var` 声明（兼容旧写法 `Var` 和 `pVal`）。声明行在执行前移除，替换保留 PopTool 的字面语义。
+- **执行配置**：可设置工作目录、解释器、依赖工具、输出编码、超时、参数数组及环境变量。高级参数元数据保留 PopTool 的必填、文本、多行、数字、布尔、下拉、单选按钮组、文件、目录、密码和 Android 设备类型。
+- **输出**：当前项目中每个脚本复用一个 IDE Run 标签，显示打印、错误和退出码，不自动打印包含脚本正文的启动命令行；可停止或通过 IDE 标准绿色运行图标再次运行。完成后重新执行会清空旧输出；脚本改名后仍按脚本 ID 复用标签。启动中或运行中重复点击会切回已有控制台，不额外启动进程。不同脚本可并发运行且各自保留标签，关闭标签后下次执行会重新创建。参数在运行前填写；运行中的标准输入关闭，不支持交互菜单。
 
 示例：
 
 ```text
 var message = ${消息:你好}
-var mode = ${模式:开启=1|关闭=0}
+var mode = ${模式@choice:开启=1|关闭=0}
 Write-Output '${message}'
 Write-Output '${mode}'
 ```
 
 参数值按原语法直接替换；脚本作者负责按照目标语言正确处理引号。
+
+
+## 参数模板与 AI 编写
+
+统一格式为 `${名称@类型:默认值或选项}`。支持 `@text`、`@multiline`、`@integer`、`@number`、`@boolean`、`@choice`、`@radio`、`@file`、`@dir`、`@secret`；省略类型及旧默认值、选项、声明写法继续兼容。各类型规则见[参数模板指南](docs/wiki/zh-CN.md#参数模板语法)。
+
+工具栏中“环境路径”后依次是“帮助”和“复制 SKILL”。点击“帮助”可直接打开语法弹窗；“全部参数类型演示 Bash”可复制并保存为 Bash 脚本，源码见[演示脚本](examples/all-parameter-types.bash)。此示例中的路径 `1`、`2` 和令牌 `1009` 是演示值，脚本最后会输出令牌实际内容。
+
+点击“复制 SKILL”会将完整的 [NikoTools 脚本参数转换技能](src/main/resources/skills/nikotools-script-parameters/SKILL.md) 复制到剪贴板。将它与业务需求或现有脚本一起交给 AI，可把运行前的用户输入转换成插件控件和 `var` 声明。SKILL 包含十种控件、默认值及选项规则、旧语法兼容和按目标语言处理参数的方法；复制按钮不会自动安装技能。
+
+每次执行创建一个临时输出目录，并通过 `POPTOOLS_OUTPUT_DIR` 提供给脚本；Run 控制台会打印其路径。`echo`、`print` 等输出不会自动写入文件。脚本可主动向该目录保存报告等结果，运行后空目录删除，非空目录保留。
 
 ## 环境路径
 
@@ -146,7 +159,7 @@ Write-Output '${mode}'
 
 冲突时选择覆盖、另存或跳过；批量导入逐条报告失败，不修改原文件。未知字段、未知参数类型或不支持的执行类型会明确报错；`internal`、`url` 运行方式不属于本次脚本迁移范围。PopTool 内部资源路径、托管环境和专用环境变量不能直接在 IDE 中复用，需要在导入后改为系统路径。
 
-脚本和工具路径使用 IDE 用户级配置 `options/poptool-scripts.xml` 持久化，跨项目共享。默认工作目录在每次运行时解析为当前项目根目录；相对目录基于项目根目录。文件与目录选择器优先打开输入框中的有效路径（相对路径基于当前项目根目录）；路径为空、无效或不存在时从当前 IDE 窗口的项目根目录打开。仍可浏览并选择项目外的路径；无项目根目录时使用 IDE 的默认选择行为。
+脚本和工具路径使用 IDE 用户级配置 `options/poptool-scripts.xml` 持久化，跨项目共享。默认工作目录在每次运行时解析为当前项目根目录；相对目录基于项目根目录。文件与目录选择器优先打开输入框中的目录或文件所在目录（相对路径基于当前项目根目录）；文件或目录不存在时逐级向上查找最近可打开的目录，例如 `A/B/C.txt` 中 C 不存在时打开 B，B 也不存在时打开 A。路径为空、格式无效或没有可用父目录时从当前 IDE 窗口的项目根目录打开。仍可浏览并选择项目外的路径；无项目根目录时使用 IDE 的默认选择行为。
 
 “批量操作”提供批量目录导入和导出，保留默认值。导入前将当前库备份到 IDE 配置目录的 `poptool-backups`，读取所选目录（优先使用其中的 `tools` 子目录）的脚本 JSON，不修改来源文件。直接引用导出目录内 `.py/.ps1/.sh/.bat/.cmd` 文件的脚本会复制到 IDE 配置目录的 `poptool-assets`，保留同目录依赖并调整入口路径。导出在所选目录内新建带时间戳的目录，定义存入 `tools`；直接引用绝对路径脚本文件时，复制其所在目录的文件到 `scripts` 并改为相对入口，以便重新导入。动态引用、工作目录之外的资源及外部解释器路径仍需用户自行迁移或配置。
 

@@ -7,11 +7,13 @@ NikoTools is a custom script plugin for IntelliJ Platform IDEs. Save recurring c
 - [中文使用指南](zh-CN.md)
 - [English user guide](en-US.md)
 - [项目 README / Project README](../../README.md)
+- [脚本参数转换 SKILL / Script parameter conversion skill](../../src/main/resources/skills/nikotools-script-parameters/SKILL.md)
+- [全部参数演示脚本 / All parameter types example](../../examples/all-parameter-types.bash)
 - [MIT License](../../LICENSE)
 
-本文档对应当前项目版本 **0.1.3**。界面当前使用中文；英文指南保留实际界面名称并给出英文解释。
+本文档对应当前项目版本 **0.1.4**。界面当前使用中文；英文指南保留实际界面名称并给出英文解释。
 
-These guides describe version **0.1.3**. The current plugin UI uses Chinese labels; the English guide includes their translations.
+These guides describe version **0.1.4**. The current plugin UI uses Chinese labels; the English guide includes their translations.
 
 ## Marketplace / IDE Overview
 
@@ -19,6 +21,6 @@ These guides describe version **0.1.3**. The current plugin UI uses Chinese labe
 
 The bilingual Overview comes from the `description` in [`plugin.xml`](../../src/main/resources/META-INF/plugin.xml). Rebuild and install the ZIP to view the local plugin description. Updating the Marketplace listing requires uploading and publishing the updated plugin.
 
-描述使用 CDATA 包裹的基础 HTML，而不是 Markdown；详见 [JetBrains 官方配置文档](https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html#idea-plugin__description)。Wiki 是仓库内的完整指南，Overview 是随安装包提供的使用概览；当前源码链接若迁移，应同步更新 `plugin.xml` 和项目 README。
+描述使用 CDATA 包裹的基础 HTML，而不是 Markdown；详见 [JetBrains 官方配置文档](https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html#idea-plugin__description)。Wiki 是仓库内的完整指南，Overview 是随安装包提供的使用概览。当前源码仓库为 [popkter/niko_tools](https://github.com/popkter/niko_tools)。
 
 The description uses basic HTML inside CDATA, as documented in the [JetBrains plugin configuration reference](https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html#idea-plugin__description). The repository Wiki provides the full guide, while the packaged Overview provides a concise introduction. Update the source links in `plugin.xml` and the project README if the repository moves.

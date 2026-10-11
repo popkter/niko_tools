@@ -9,6 +9,118 @@ import java.nio.file.Files
 
 /** Exercise native DSL bindings and dialog construction in a real test application. */
 class UiDslTest : LightPlatformTestCase() {
+    fun testScriptProcessHandlerHidesStartupCommandAndPreservesOutput() {
+        val windows = com.intellij.openapi.util.SystemInfo.isWindows
+        val line = if (windows) com.intellij.execution.configurations.GeneralCommandLine("cmd.exe").withParameters(
+            "/d", "/q", "/c", "echo visible-output & echo visible-error 1>&2 & rem private-script-marker"
+        ) else com.intellij.execution.configurations.GeneralCommandLine("/bin/sh").withParameters(
+            "-c", "printf 'visible-output\\n'; printf 'visible-error\\n' >&2; # private-script-marker"
+        )
+        val handler = ScriptRunner.ScriptProcessHandler(line)
+        val output = java.util.Collections.synchronizedList(arrayListOf<Pair<com.intellij.openapi.util.Key<*>, String>>())
+        handler.addProcessListener(object : com.intellij.execution.process.ProcessAdapter() {
+            override fun onTextAvailable(event: com.intellij.execution.process.ProcessEvent, outputType: com.intellij.openapi.util.Key<*>) {
+                output.add(outputType to event.text)
+            }
+        })
+        try {
+            handler.notifyTextAvailable("运行提示\n", com.intellij.execution.process.ProcessOutputTypes.SYSTEM)
+            handler.startNotify()
+            assertTrue(com.intellij.openapi.application.ApplicationManager.getApplication().executeOnPooledThread<Boolean> {
+                handler.waitFor(10_000)
+            }.get(15, java.util.concurrent.TimeUnit.SECONDS))
+            assertEquals(0, handler.exitCode)
+            val events = synchronized(output) { output.toList() }
+            assertTrue(events.filter { it.first == com.intellij.execution.process.ProcessOutputTypes.STDOUT }.joinToString("") { it.second }.contains("visible-output"))
+            assertTrue(events.filter { it.first == com.intellij.execution.process.ProcessOutputTypes.STDERR }.joinToString("") { it.second }.contains("visible-error"))
+            assertTrue(events.any { it.first == com.intellij.execution.process.ProcessOutputTypes.SYSTEM && it.second == "运行提示\n" })
+            assertFalse(events.any { it.second.contains("private-script-marker") })
+        } finally {
+            if (!handler.isProcessTerminated) handler.destroyProcess()
+        }
+    }
+
+    fun testExplicitControlsValidateNumbersAndSubmitRadioValues() {
+        val script = ScriptDefinition().also {
+            it.executor.command = "echo hello"
+            it.parameters = ParameterTemplates.synchronize(listOf(
+                "\${次数@integer:3} \${比例@number:0.5} \${启用@boolean:true} " +
+                    "\${环境@radio:开发=dev|生产=prod} \${说明@multiline:first} \${令牌@secret}"
+            ), emptyList())
+        }
+        val library = ScriptLibrary.getInstance()
+        val oldState = library.state
+        library.save(script, false)
+        val submitted = arrayListOf<Map<String, String>>()
+        val dialog = ParameterDialog(project, script, mapOf("环境" to "prod"), onExecute = { submitted.add(it); false })
+        try {
+            val builder = dialog.javaClass.getDeclaredMethod("createCenterPanel").apply { isAccessible = true }
+            val content = builder.invoke(dialog) as Component
+            val components = descendants(content).toList()
+            assertFalse(components.filterIsInstance<javax.swing.JLabel>().any { it.text.endsWith(" *") })
+            val radio = components.filterIsInstance<javax.swing.JRadioButton>()
+            assertEquals(listOf("开发", "生产"), radio.map { it.text })
+            assertEquals(javax.swing.BoxLayout.X_AXIS, (radio.first().parent.layout as javax.swing.BoxLayout).axis)
+            assertTrue(radio[1].isSelected)
+            radio[0].doClick()
+            assertFalse(radio[1].isSelected)
+            val flag = components.filterIsInstance<javax.swing.JCheckBox>().single { it.text == "" }
+            flag.isSelected = false
+            components.filterIsInstance<com.intellij.ui.components.JBTextArea>().single().text = "first\nsecond"
+            dialog.performOKAction()
+            assertTrue(submitted.isEmpty()) // Required validation remains active without the star.
+            val password = components.filterIsInstance<javax.swing.JPasswordField>().single()
+            password.text = "secret-value"
+            val maskedChar = password.echoChar
+            val visibility = components.filterIsInstance<javax.swing.JToggleButton>().single { it.name == "parameter.passwordVisibility" }
+            assertNotNull(visibility.icon)
+            visibility.doClick()
+            assertEquals('\u0000', password.echoChar)
+            assertEquals("隐藏密码", visibility.toolTipText)
+            visibility.doClick()
+            assertEquals(maskedChar, password.echoChar)
+            assertEquals("secret-value", String(password.password))
+            // Integer, number, multiline, and secret controls have save-default actions.
+            val saveButtons = components.filterIsInstance<javax.swing.JButton>().filter { it.text == "设为默认值" }
+            assertEquals(4, saveButtons.size)
+            saveButtons.last().doClick()
+            assertEquals("secret-value", library.list(false).single { it.id == script.id }.parameters.single { it.id == "令牌" }.defaultValue)
+            val fields = components.filterIsInstance<javax.swing.JTextField>().filter { it !is javax.swing.JPasswordField }
+            val integer = fields.single { it.text == "3" }
+            val number = fields.single { it.text == "0.5" }
+            integer.text = "1.5"
+            dialog.performOKAction()
+            assertTrue(submitted.isEmpty())
+            integer.text = "4"
+            number.text = "invalid"
+            dialog.performOKAction()
+            assertTrue(submitted.isEmpty())
+            number.text = "0.75"
+            dialog.performOKAction()
+            assertEquals(mapOf("次数" to "4", "比例" to "0.75", "启用" to "False", "环境" to "dev", "说明" to "first\nsecond", "令牌" to "secret-value"), submitted.single())
+        } finally { Disposer.dispose(dialog.disposable); library.loadState(oldState) }
+    }
+
+    fun testTemplateRadioAndSecretPreviewUseTheirNativeControls() {
+        val dialog = TemplateHelpDialog(project)
+        try {
+            val builder = dialog.javaClass.getDeclaredMethod("createCenterPanel").apply { isAccessible = true }
+            val content = builder.invoke(dialog) as Component
+            val list = descendants(content).filterIsInstance<javax.swing.JList<*>>().single()
+            val preview = descendants(content).filterIsInstance<com.intellij.ui.components.JBTextArea>().single { it.name == "template.preview" }
+            list.selectedIndex = (0 until list.model.size).single { list.model.getElementAt(it).toString() == "单选按钮组" }
+            assertEquals("dev", preview.text)
+            descendants(content).filterIsInstance<javax.swing.JRadioButton>().single { it.text == "生产" }.doClick()
+            assertEquals("prod", preview.text)
+            list.selectedIndex = (0 until list.model.size).single { list.model.getElementAt(it).toString() == "密码输入" }
+            val password = descendants(content).filterIsInstance<javax.swing.JPasswordField>().single()
+            password.text = "private-token"
+            descendants(content).filterIsInstance<javax.swing.JToggleButton>().single { it.name == "parameter.passwordVisibility" }.doClick()
+            assertEquals('\u0000', password.echoChar)
+            assertEquals("******", preview.text)
+        } finally { Disposer.dispose(dialog.disposable) }
+    }
+
     fun testExecutionDialogKeepsParametersForRepeatedRuns() {
         val script = ScriptDefinition().also { it.title = "Repeat"; it.executor.command = "echo hello" }
         script.parameters = ParameterTemplates.synchronize(listOf("${'$'}{name:hello}"), emptyList())
@@ -95,6 +207,8 @@ class UiDslTest : LightPlatformTestCase() {
                 else emptyList()
             }
             assertEquals(cards.size, list.model.size)
+            val removed = setOf("显示 Android 触摸点 PowerShell", "查看日志目录 PowerShell", "按数量输出序号 Python")
+            assertFalse((0 until list.model.size).any { list.model.getElementAt(it).toString() in removed })
             assertEquals(0, list.selectedIndex)
             assertFalse(description.isEditable)
             assertFalse(code.isEditable)
@@ -107,7 +221,15 @@ class UiDslTest : LightPlatformTestCase() {
                 assertEquals(cards[index].asJsonObject["code"].asString, code.text)
                 assertEquals(0, code.caretPosition)
                 val parameters = ParameterTemplates.synchronize(listOf(code.text), emptyList())
-                val defaults = parameters.associate { it.id to (it.defaultValue?.toString() ?: "") }
+                val defaults = parameters.associate {
+                    val initial = it.defaultValue?.toString() ?: ""
+                    val value = when (it.kind) {
+                        "boolean" -> if (initial.equals("true", ignoreCase = true) || initial == "1") "True" else "False"
+                        "secret" -> if (initial.isNotEmpty()) "******" else ""
+                        else -> initial
+                    }
+                    it.id to value
+                }
                 val expected = if (parameters.any { it.required && defaults.getValue(it.id).isBlank() }) ""
                     else ParameterTemplates.render(code.text, defaults)
                 assertEquals(expected, preview.text)
@@ -227,6 +349,19 @@ class UiDslTest : LightPlatformTestCase() {
             val panel = ScriptToolWindow.ScriptPanel(project)
             assertEquals(3, panel.scriptTable.columnCount)
             assertSame(panel, panel.component.getClientProperty("poptool.scriptPanel"))
+            val actions = panel.globalActions.getChildren(null)
+            assertEquals(listOf("环境路径", "帮助", "复制 SKILL"), actions.takeLast(3).map { it.templatePresentation.text })
+            val clipboard = com.intellij.openapi.ide.CopyPasteManager.getInstance()
+            val oldContents = clipboard.contents
+            try {
+                val copySkill = actions.last()
+                copySkill.actionPerformed(com.intellij.openapi.actionSystem.AnActionEvent.createFromAnAction(
+                    copySkill, null, "NikoTools.ScriptToolbar", com.intellij.openapi.actionSystem.DataContext.EMPTY_CONTEXT
+                ))
+                val expected = requireNotNull(javaClass.getResourceAsStream("/skills/nikotools-script-parameters/SKILL.md"))
+                    .reader(Charsets.UTF_8).use { it.readText() }
+                assertEquals(expected, clipboard.getContents<String>(java.awt.datatransfer.DataFlavor.stringFlavor))
+            } finally { if (oldContents != null) clipboard.setContents(oldContents) }
         } finally { dialogs.forEach { Disposer.dispose(it.disposable) } }
     }
     fun testSelectedRowBackgroundIncludesIconAndAllColumns() {
@@ -292,7 +427,15 @@ class UiDslTest : LightPlatformTestCase() {
                 assertEquals(rootB, ProjectRootBrowseListener(descriptor, projectA, field).getInitialFile())
                 field.text = "input.txt"
                 assertEquals(rootB, ProjectRootBrowseListener(descriptor, projectB, field).getInitialFile())
-                for (invalid in listOf("", "   ", b.resolve("missing.txt").toString(), "bad\u0000path")) {
+                field.text = b.resolve("missing.txt").toString()
+                assertEquals(rootB, ProjectRootBrowseListener(descriptor, projectA, field).getInitialFile())
+                field.text = b.resolve("missing-directory/deeper/C.txt").toString()
+                assertEquals(rootB, ProjectRootBrowseListener(descriptor, projectA, field).getInitialFile())
+                field.text = a.resolve("missing-B/C.txt").toString()
+                assertEquals(rootA, ProjectRootBrowseListener(descriptor, projectB, field).getInitialFile())
+                field.text = "missing-B/C.txt"
+                assertEquals(rootA, ProjectRootBrowseListener(descriptor, projectA, field).getInitialFile())
+                for (invalid in listOf("", "   ", "bad\u0000path")) {
                     field.text = invalid
                     assertEquals(rootA, ProjectRootBrowseListener(descriptor, projectA, field).getInitialFile())
                     assertEquals(rootB, ProjectRootBrowseListener(descriptor, projectB, field).getInitialFile())
